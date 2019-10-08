@@ -1,0 +1,164 @@
+func euler2 ()
+{
+	f_2 int = 1 ;
+	f_1 int = 2 ;
+	f int = 3;
+	sum int = 2;
+	wh f < 4_000_000 {
+		f = f_1 + f_2;
+		if f % 2 == 0 { sum = sum + f; }
+		f_2 = f_1;
+		f_1 = f;
+	}
+	print (sum);
+}
+
+func main ()
+{
+	print ("unit array");
+	us [1_0] unit;
+	print (us[5]);
+	s [2]int;
+	s2 [10]string;
+	s[1] = 3;
+	s2[s[1]] = "data";
+	print (s2[3]);
+	s3 [3]bool;
+	if !s3[1] {
+		print ("not");
+	}
+	i2 int = 42;
+	print (i2);
+	print (globalString);
+	globalString string = "i am local";
+	print (globalString);
+	print (globalString2);
+	ar [2]int;
+	ar[0] = 42;
+	ar[1] = 23;
+	ar2 [2]int;
+	ar2 = ar;
+	print (ar2[0]);
+	print (ar == ar2);
+	aru [10]unit;
+	print (aru[8]);
+
+	ar3 [5]int;
+	print (len (ar));
+	ar4 [fill]int = 7,10;
+	print (len (ar4));
+	print (ar4[0]);
+	print (ar4);
+
+	euler2();
+	arFilled [fill]int = 1, 5, 7;
+	print (arFilled);
+	print (42, 23, 50);
+	print (42, arFilled, 50);
+
+	m [map]int;
+	m["foo"] = 42;
+	print (m["foo"]);
+	print (m["bar"]);
+	m2 [map]int;
+	m2["foo"] = 42;
+	m42 [map]int = m2;
+//	m42 = m2;
+	m["baz"] = 23;
+	delete(m, "baz");
+	print (m["baz"]);
+
+	arA[fill]int = 1, 4;
+	arB[fill]int = 1, 4;
+	print (arA == arB);
+	arB[0] = 42;
+	print (arA == arB);
+
+	str1 string;
+	str1 = stringValue (45);
+	print (str1);
+
+	iPP int = 5;
+	iPP++;
+	print (iPP);
+	iPP--;
+	iPP--;
+	print (iPP);
+
+	ic int = 3;
+	ic += 1;
+	print (ic);
+	ic *= 2;
+	print (ic);
+
+	c char;
+	c = 'j';
+	print (c);
+	print (c - 'a' + 'A');
+	ca [fill]char = 'f', 'o', 'o';
+	print (ca);
+	ca[0] = 'b';
+	print (ca);
+
+	cm [map]char;
+	cm["foo"] = 'b';
+	cm["bar"] = 'a';
+	print (cm["bar"]);
+
+	ua [map]unit;
+	ua["foo"] = iota;
+	print (ua);
+	u unit;
+	print (u);
+	if ua["foo"] { print ("good");}
+	if ua["bar"] { print ("bad");}
+	print (ua["bar"]);
+	print (ua["foo"]);
+	print ("Map is pointer");
+	m11 [map]int;
+	m11["a"] = 1;
+	m22 := m11;
+	m22["a"] = 5;
+	print (m11["a"]);
+	print (m22["a"]);
+
+	print ("Big scalar independent");
+	b1 big;
+	b1 = 111;
+	b2 big;
+	b2 = b1;
+	print(b2);
+	b2 = 222;
+	print(b1);
+	print(b2);
+
+	print ("Big float array and float:");
+	bfa [fill]float = 0.5, 10.5, 5;
+	bfs [slice]float = bfa[0:len(bfa)];
+	bfs = bfa[0:len(bfa)];
+	print(bfs);
+	bfs[0] = 23.5;
+	print(bfa);
+	bfa[1] = 101.5;
+	print(bfs);
+
+	print ("Big float array and array:");
+	bfa2 [2]float = 12.25, 5.5;
+	bfa3 [2]float;
+	bfa3 = bfa2;
+	bfa3[0] = 64.75;
+	print(bfa2);
+	print(bfa3);
+
+	print ("Slice indexes:");
+	arsi [fill]char = 'a', 'b', 'c', 'd', 'e';
+	print(arsi);
+	slsi := arsi[1:];
+	print(slsi);
+	slsi = arsi[:2];
+	print(slsi);
+}
+
+globalString string = "i am global";
+
+globalString2 string = globalString + " as well";

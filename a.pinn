@@ -1,0 +1,18 @@
+func main ( ) {
+	stackA();
+}
+
+func stackA() {
+	stackB(3);
+}
+
+func stackB(i int) {
+	if i > 0 {
+		i--;
+		stackB(i);
+		if i == 0 {
+			debug;
+		}
+	}
+
+}

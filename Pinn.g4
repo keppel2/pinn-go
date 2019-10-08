@@ -1,0 +1,152 @@
+grammar Pinn; //wot
+file : ( function | varDecl ';' )+ ;
+function
+  : 'func' ID LPAREN (fvarDecl (',' fvarDecl)*)?  ')' kind? block ;
+
+testRule
+  : ID ID ;
+
+block
+  : '{' statement* '}' ;
+
+fvarDecl
+  : ID kind ;
+
+varDecl
+  : ID kind ('=' exprList)?
+  | ID CE expr ;
+
+LSQUARE : '[' ;
+LPAREN : '(' ;
+kind
+  : (LSQUARE ( MAP | SLICE | FILL | expr) ']')? TYPES ;
+
+MAP
+ : 'map' ;
+
+SLICE
+ : 'slice' ;
+
+FILL
+ : 'fill' ;
+
+TYPES
+  : ('int' | 'bool' | 'unit' | 'string' | 'big' | 'float' | 'char' ) ; 
+
+simpleStatement
+  : set
+  | ID (LSQUARE expr ']')? ('++' | '--') ;
+
+bracketExpr
+  : LSQUARE first=expr? COLON second=expr? ']'
+  | LSQUARE expr ']' ;
+
+indexExpr
+  : ID LSQUARE first=expr? COLON second=expr? ']'
+  | ID LSQUARE expr ']' ;
+
+funcExpr
+  : 'print' LPAREN exprList ')'
+  | 'printB' LPAREN expr ')'
+  | 'printH' LPAREN expr ')'
+  | 'delete' LPAREN ID ',' expr ')'
+  |  'len' LPAREN ID ')'
+  | 'strLen' LPAREN expr ')'
+  | 'stringValue' LPAREN expr ')' ;
+
+expr
+  : 
+  funcExpr
+  | ID LPAREN exprList? ')'
+  | indexExpr
+  | ('-' | '!' | '^') expr
+  | expr ('-' | '^' | BINOP) expr
+  | expr ('==' | '!=' | '>' | '<' | '>=' | '<=' ) expr
+  | expr ('&&' | '||') expr
+  | expr '?' expr COLON expr
+  | LPAREN expr ')'
+  | LPAREN firstExpr=expr? COLON secondExpr=expr ')'
+  | ID
+  | FLOAT
+  | INT
+  | BOOL
+  | STRING
+  | CHAR
+  | IOTA
+  ;
+
+exprList
+  : expr (',' expr)* ;
+
+returnStatement
+  : 'return' expr? ';' ;
+
+ifStatement
+  : 'if' expr block ('else' block)?;
+
+whStatement
+  : 'wh' expr block ;
+
+RANGE : 'range' ;
+
+foStatement
+  : 'fo' (varDecl | fss=simpleStatement)? ';' expr ';' sss=simpleStatement block
+  | 'fo' ID ',' ID '=' RANGE expr block |
+    'fo' ID '=' RANGE expr block ;
+caseStatement
+  : 'case' exprList COLON statement* ;
+
+switchStatement
+  : 'switch' expr '{' caseStatement* ('default' COLON statement*)? '}' ;
+
+statement
+  :  expr ';'
+  | varDecl ';' 
+  | simpleStatement ';'
+  | ifStatement
+  | whStatement 
+  | switchStatement
+  | returnStatement
+  | foStatement
+  | 'break' ';'
+  | 'continue' ';'
+  | 'fallthrough' ';'
+  | 'debug' ';'
+  | ';' ;
+set
+  : ID (LSQUARE expr ']')? '=' expr #simpleSet
+  | ID (LSQUARE expr ']')? ('-' | '^' | BINOP) '=' expr #compoundSet ;
+
+COLON : ':' ;
+CE : ':=' ;
+IOTA : 'iota' ;
+BINOP : ('+' | '*' | '/' | '%' | '&' | '|' | '<<' | '>>' ) ;
+BOOL : 'true' | 'false' ;
+ID : [a-zA-Z_]([a-zA-Z_0-9])* ;
+CHAR : '\''[a-zA-Z_0-9]'\'' ;
+INT : '0'
+  | [1-9] ('_'? DECIMAL_DIGITS)?
+  | '0x' '_'? HEX_DIGIT ('_'? HEX_DIGIT)*
+  | '0b' '_'? BINARY_DIGIT ('_'? BINARY_DIGIT)*
+  | '0o' '_'? OCTAL_DIGIT ('_'? OCTAL_DIGIT)* ;
+
+FLOAT : DECIMAL_DIGITS '.' DECIMAL_DIGITS? DECIMAL_EXPONENT?
+  | DECIMAL_DIGITS DECIMAL_EXPONENT
+  | '.' DECIMAL_DIGITS DECIMAL_EXPONENT?
+  | '0x' HEX_MANTISSA HEX_EXPONENT ;
+
+WS : ([ \t\n]+ | '//' ~('\n')* '\n' | '/*' .*? '*/' )-> skip ;
+STRING : '"' ~('"')* '"' ;
+
+fragment DECIMAL_DIGIT : [0-9] ;
+fragment DECIMAL_DIGITS : DECIMAL_DIGIT ('_'? DECIMAL_DIGIT)* ;
+fragment DECIMAL_EXPONENT : 'e' [+-]? DECIMAL_DIGITS ;
+fragment HEX_DIGIT : [0-9a-f] ;
+fragment HEX_DIGITS: HEX_DIGIT ('_'? HEX_DIGIT)* ;
+fragment HEX_MANTISSA : '_'? HEX_DIGITS '.' HEX_DIGITS?
+  | '_'? HEX_DIGITS
+  | '.' HEX_DIGITS ;
+fragment HEX_EXPONENT : 'p' [+-]? DECIMAL_DIGITS 
+  | 'h' [+-]? HEX_DIGITS ;
+fragment OCTAL_DIGIT : [0-7] ;
+fragment BINARY_DIGIT : [01] ;

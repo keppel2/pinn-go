@@ -1,0 +1,60 @@
+func exitEarly () {
+	fo i int = 0; i < 3; i = i + 1 {
+		print (i);
+		switch true {
+		case true: continue;
+		}
+		print ("bad");
+	}
+	switch true {
+	case true: return;
+	}
+	print ("bad");
+}
+
+func getArray () [3] bool {
+	rt [3]bool;
+	rt[1] = true;
+	return rt;
+}
+
+func getMap() [map] int {
+	rt [map] int;
+	rt ["foo"] = 42;
+	rt ["bar"] = 23;
+	rt [stringValue (len (rt))] = 200;
+	return rt;
+}
+
+func g (i int, j int) {
+	print (i);
+	print (j);
+	print (f());
+	return ;
+	print ("bad");
+}
+
+func mutMap(m [map] bool) {
+	m["5"] = true;
+	print (m["2"]);
+	print (m["5"]);
+}
+
+func main ()
+{
+	g(10, 20);
+	ar [3]bool;
+	ar = getArray();
+	m [map]int;
+	m = getMap();
+	print (m["2"]);
+	m2 [map]bool;
+	m2["2"] = true;
+	mutMap(m2);
+	print (m2["5"]);
+	exitEarly();
+}
+
+func f () string {
+	return "str";
+}

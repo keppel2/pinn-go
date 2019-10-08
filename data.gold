@@ -1,0 +1,57 @@
+unit array
+iota
+data
+not
+42
+i am global
+i am local
+i am global as well
+42
+true
+iota
+2
+2
+7
+[7 10]
+4613732
+[1 5 7]
+[42 23 50]
+[42 [1 5 7] 50]
+42
+iota
+iota
+true
+false
+45
+6
+4
+4
+8
+j
+J
+[f o o]
+[b o o]
+a
+map[foo:iota]
+iota
+good
+false
+true
+Map is pointer
+5
+5
+Big scalar independent
+111
+111
+222
+Big float array and float:
+[0.5 10.5 5]
+[23.5 10.5 5]
+[23.5 101.5 5]
+Big float array and array:
+[12.25 5.5]
+[64.75 5.5]
+Slice indexes:
+[a b c d e]
+[b c d e]
+[a b]
