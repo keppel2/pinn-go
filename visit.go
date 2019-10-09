@@ -23,16 +23,13 @@ func visitExprListBool(actx antlr.ParserRuleContext, gv *types.GVal, v *types.PV
 
 func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interface{}) interface{} {
 	var rt interface{}
+	oldPrc := gv.Prc
 	gv.Prc = actx
 	switch ctx := actx.(type) {
 
 	case *parser.SimpleStatementContext:
 
 		switch v := ctx.GetChild(0).(type) {
-		case *parser.CompoundSetContext:
-			visitGeneric(v, gv)
-		case *parser.SimpleSetContext:
-			visitGeneric(v, gv)
 		case antlr.TerminalNode:
 			if v.GetSymbol().GetTokenType() == parser.PinnParserID {
 				opString := ctx.GetChildren()[len(ctx.GetChildren())-1].(antlr.TerminalNode).GetText()
@@ -46,26 +43,26 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 						lhs := types.NewScalarPval(v2.Get(index))
 						result = doOp(ctx, lhs, nil, opString)
 						v2.Set(index, result.GetInterface())
-						return nil
-
+						break
 					}
 					result = doOp(ctx, v2, nil, opString)
 					gv.PutPv(ctx.ID().GetText(), result)
-					return nil
+					break
 				default:
 					panic(types.ErrCase)
 				}
 
 			}
+		default:
+			visitGeneric(v.(antlr.ParserRuleContext), gv)
 		}
 
 	case *parser.ExprListContext:
-		rt := make([]*types.PVal, 0, 10)
+		rt = make([]*types.PVal, 0, 10)
 		for _, child := range ctx.AllExpr() {
 			v := visitExpr(child, gv)
-			rt = append(rt, v)
+			rt = append(rt.([]*types.PVal), v)
 		}
-		return rt
 
 	case *parser.CompoundSetContext:
 		str := ctx.ID().GetText()
@@ -112,7 +109,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		if ctx.CE() != nil {
 			e := visitExpr(ctx.Expr(), gv)
 			f.M[strID] = e
-			return nil
+			break
 		}
 		k := visitGeneric(ctx.Kind(), gv).(types.Kind)
 		if ctx.ExprList() == nil {
@@ -150,24 +147,23 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 	case *parser.FvarDeclContext:
 		strID := ctx.ID().GetText()
-/*
-		if _, ok := gv.Fc.M[strID]; ok {
-			panic(types.ErrReDeclare)
-		}
+		/*
+			if _, ok := gv.Fc.M[strID]; ok {
+				panic(types.ErrReDeclare)
+			}
 
-		gv.Fc.ParamList = append(gv.Fc.ParamList, strID)
+			gv.Fc.ParamList = append(gv.Fc.ParamList, strID)
 
-*/
+		*/
 		k := visitGeneric(ctx.Kind(), gv).(types.Kind)
-		return types.FKind{k, strID}
+		rt = types.FKind{k, strID}
 
-		
 	case *parser.KindContext:
 
 		strTYPE := ctx.TYPES().GetText()
 		t := types.MLitToType[strTYPE]
 		if ctx.LSQUARE() == nil {
-			return types.NewKind(types.GScalar, t, 1)
+			rt = types.NewKind(types.GScalar, t, 1)
 		} else {
 			if ctx.Expr() != nil {
 				v := visitExpr(ctx.Expr(), gv)
@@ -175,13 +171,13 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 				if x == -1 {
 					panic(types.ErrRange)
 				}
-				return types.NewKind(types.GArray, t, x)
+				rt = types.NewKind(types.GArray, t, x)
 			} else if ctx.MAP() != nil {
-				return types.NewKind(types.GMap, t, 0)
+				rt = types.NewKind(types.GMap, t, 0)
 			} else if ctx.SLICE() != nil {
-				return types.NewKind(types.GSlice, t, 0)
+				rt = types.NewKind(types.GSlice, t, 0)
 			} else if ctx.FILL() != nil {
-				return types.NewKind(types.GArray, t, -1)
+				rt = types.NewKind(types.GArray, t, -1)
 			} else {
 				panic(types.ErrCase)
 			}
@@ -211,7 +207,6 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		}
 
 	case *parser.IndexExprContext:
-		var rt *types.PVal
 		v := gv.GetPv(ctx.ID().GetText())
 		if ctx.COLON() != nil {
 			lhsv := 0
@@ -227,11 +222,10 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			e := visitExpr(ctx.Expr(0), gv)
 			rt = types.NewScalarPval(v.Get(types.FixIndex(e.GetInterface())))
 		}
-		return rt
-
 	default:
 		panic(types.ErrCase)
 	}
+	gv.Prc = oldPrc
 	return rt
 
 }
