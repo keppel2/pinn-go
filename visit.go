@@ -21,7 +21,7 @@ func visitExprListBool(actx antlr.ParserRuleContext, gv *types.GVal, v *types.PV
 	return false
 }
 
-func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal) interface{} {
+func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interface{}) interface{} {
 	var rt interface{}
 	gv.Prc = actx
 	switch ctx := actx.(type) {
@@ -150,14 +150,18 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal) interface{} {
 
 	case *parser.FvarDeclContext:
 		strID := ctx.ID().GetText()
+/*
 		if _, ok := gv.Fc.M[strID]; ok {
 			panic(types.ErrReDeclare)
 		}
-		gv.Fc.ParamList = append(gv.Fc.ParamList, strID)
-		k := visitGeneric(ctx.Kind(), gv).(types.Kind)
-		v := k.Iv()
-		gv.Fc.M[strID] = v
 
+		gv.Fc.ParamList = append(gv.Fc.ParamList, strID)
+
+*/
+		k := visitGeneric(ctx.Kind(), gv).(types.Kind)
+		return types.FKind{k, strID}
+
+		
 	case *parser.KindContext:
 
 		strTYPE := ctx.TYPES().GetText()
@@ -188,7 +192,6 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal) interface{} {
 		i := ctx.Expr()
 		if i != nil {
 			gv.Fc.Rt = visitExpr(i, gv)
-			gv.Fc.Rt.GetKind().EqualsError(gv.Fc.Expected)
 		}
 	case *parser.SimpleSetContext:
 		str := ctx.ID().GetText()
@@ -408,10 +411,7 @@ func visitExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
 				if eL := ctx.ExprList(); eL != nil {
 					s = visitGeneric(eL, gv).([]*types.PVal)
 				}
-				if gv.M[id] == nil {
-					panic(types.ErrUnDeclare)
-				}
-				rt = visitFunction(gv.M[id].FContext, s, id, gv)
+				rt = visitFunction(gv.Fkmap[id].FunctionContext, s, id, gv)
 			case parser.PinnParserLSQUARE:
 				/*
 				   valAndType(ctx.Expr(0).GetStart().GetTokenIndex())
@@ -641,25 +641,24 @@ func visitStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 func visitFunction(actx antlr.ParserRuleContext, s []*types.PVal, str string, gv *types.GVal) *types.PVal {
 	ctx := actx.(*parser.FunctionContext)
 	gv.Prc = ctx
-	if gv.Fc != nil {
-		gv.PushFrame()
-	}
+	gv.PushFrame()
 	oldfc := gv.Fc
-	gv.Fc = gv.M[str].Clone()
-	if len(s) != len(gv.Fc.ParamList) {
+	gv.Fc = types.NewFc()
+	fh := gv.Fkmap[str]
+	if len(s) != len(fh.S) {
 		panic(types.ErrParamLength)
 	}
 	for k, v := range s {
-		v.GetKind().EqualsError(gv.Fc.M[gv.Fc.ParamList[k]].GetKind())
-		gv.Fc.M[gv.Fc.ParamList[k]] = v
+		v.GetKind().EqualsError(fh.S[k].Kind)
+		gv.Fc.M[fh.S[k].S] = v
 	}
 	visitGeneric(ctx.Block(), gv)
 	if gv.Fc.Rt.Invalid() {
-		if gv.Fc.Expected != (types.Kind{}) {
+		if fh.Kind != (types.Kind{}) {
 			panic(types.ErrWrongType)
 		}
 	} else {
-		gv.Fc.Rt.GetKind().EqualsError(gv.Fc.Expected)
+		gv.Fc.Rt.GetKind().EqualsError(fh.Kind)
 	}
 	rt := gv.Fc.Rt
 	gv.Fc = oldfc
@@ -679,21 +678,19 @@ func visitFile(actx antlr.ParserRuleContext, b bool) {
 		}
 	}()
 
-	gv.M = make(map[string]*types.Fc, 20)
+	gv.Fkmap = make(map[string]types.Fheader, 20)
 	gv.Gfc = types.NewFc()
 	gv.Prc = ctx
 
 	for _, child := range ctx.AllFunction() {
 		v := child
-		gv.Fc = types.NewFc()
 		visitFunctionHeader(v, gv)
-		gv.Fc = nil
 	}
 	for _, child := range ctx.AllVarDecl() {
 		v := child
 		visitGeneric(v, gv)
 	}
-	visitFunction(gv.M["main"].FContext, make([]*types.PVal, 0), "main", gv)
+	visitFunction(gv.Fkmap["main"].FunctionContext, make([]*types.PVal, 0), "main", gv)
 	if *bDebug {
 		dbg(gv)
 	}
@@ -702,17 +699,18 @@ func visitFile(actx antlr.ParserRuleContext, b bool) {
 func visitFunctionHeader(actx antlr.ParserRuleContext, gv *types.GVal) {
 	ctx := actx.(*parser.FunctionContext)
 	gv.Prc = ctx
-	if gv.M[ctx.ID().GetText()] != nil {
+	if _, ok := gv.Fkmap[ctx.ID().GetText()]; ok {
 		panic(types.ErrReDeclare)
 	}
-	gv.M[ctx.ID().GetText()] = gv.Fc
+	fh := types.Fheader{FunctionContext: ctx}
+
 	child := ctx.Kind()
 	if child != nil {
-		gv.Fc.Expected = visitGeneric(child, gv).(types.Kind)
+		fh.Kind = visitGeneric(child, gv).(types.Kind)
 	}
 
 	for _, child := range ctx.AllFvarDecl() {
-		visitGeneric(child, gv)
+		fh.S = append(fh.S, visitGeneric(child, gv).(types.FKind))
 	}
-	gv.Fc.FContext = ctx
+	gv.Fkmap[ctx.ID().GetText()] = fh
 }

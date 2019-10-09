@@ -126,16 +126,16 @@ func copyBig(b *big.Int) *big.Int {
 
 type GVal struct {
 	Fc *Fc
-	fkmap map[*parser.FunctionContext]fheader
-	M     map[string]*Fc
+	Fkmap map[string]Fheader
 	Gfc   *Fc
 	Prc   antlr.ParserRuleContext
 	Stack []antlr.ParserRuleContext
 }
 
-type fheader struct {
+type Fheader struct {
+	*parser.FunctionContext
 	Kind
-	s []FKind
+	S []FKind
 }
 
 func (g GVal) IsPathNormal() bool { return g.Fc.Path == PNormal }
@@ -504,7 +504,7 @@ var MLitToType = map[string]VType{
 
 type FKind struct {
 	Kind
-	string
+	S string
 }
 
 type Kind struct {
@@ -564,11 +564,8 @@ func (p path) PathToNormal() path {
 
 type Fc struct {
 	M         map[string]*PVal
-	ParamList []string
 	Path path
 	Rt       *PVal
-	Expected Kind
-	FContext *parser.FunctionContext
 }
 
 func NewFc() *Fc {
