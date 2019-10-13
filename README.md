@@ -15,6 +15,8 @@ The grammar is clean of implementation language and is written in ANTLR. It happ
 Running
 =======
 
+Get ANTLR from https://www.antlr.org/download.html.
+
 Save the following to `hello.pinn`:
 
 > func main ( ) {
@@ -28,4 +30,4 @@ Then run the ANTLR code and run `go run -f hello.pinn`. You should see:
 Running ANTLR
 -------------
 
-* `java -jar <path to antlr jar> -Dlanguage=Go -o pparser Pinn.g4`
+* `java -jar <path_to_antlr_jar> -Dlanguage=Go -o pparser Pinn.g4`
