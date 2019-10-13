@@ -10,14 +10,11 @@ import "strconv"
 import "strings"
 import "io/ioutil"
 
-//import "io"
 import "os"
 
 import "math/big"
 
 import "flag"
-
-//import "encoding/json"
 
 var bListTokens = flag.Bool("token", false, "desc")
 var sFile = flag.String("f", "a.pinn", "file")

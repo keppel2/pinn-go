@@ -3,24 +3,6 @@ package main
 import "testing"
 import "io/ioutil"
 
-//import "strings"
-
-/*
-func TestParse(t *testing.T) {
-	files, _ := ioutil.ReadDir(".")
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), ".pinn") {
-			defer func() {
-				if e := recover(); e != nil {
-					t.Fatal(file.Name())
-				}
-			}()
-			parse(file.Name(), true)
-		}
-	}
-}
-*/
-
 func testFile(t *testing.T, prefix string) {
 	println(prefix)
 	globalPrinter = new(stringOnly)

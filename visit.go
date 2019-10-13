@@ -84,10 +84,6 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 	case *parser.BlockContext:
 		for _, child := range ctx.AllStatement() {
-			/*
-				valAndType(child)
-				valAndType(child.GetPayload())
-			*/
 			visitStatement(child, gv)
 			if !gv.IsPathNormal() {
 				break
@@ -147,14 +143,6 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 	case *parser.FvarDeclContext:
 		strID := ctx.ID().GetText()
-		/*
-			if _, ok := gv.Fc.M[strID]; ok {
-				panic(types.ErrReDeclare)
-			}
-
-			gv.Fc.ParamList = append(gv.Fc.ParamList, strID)
-
-		*/
 		k := visitGeneric(ctx.Kind(), gv).(types.Kind)
 		rt = types.FKind{k, strID}
 
@@ -406,13 +394,6 @@ func visitExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
 					s = visitGeneric(eL, gv).([]*types.PVal)
 				}
 				rt = visitFunction(gv.Fkmap[id].FunctionContext, s, id, gv)
-			case parser.PinnParserLSQUARE:
-				/*
-				   valAndType(ctx.Expr(0).GetStart().GetTokenIndex())
-				   valAndType(ctx.COLON().GetSymbol().GetTokenIndex())
-				   valAndType(ctx.Expr(1).GetStart().GetTokenIndex())
-				*/
-
 			default:
 				panic(types.ErrCase)
 			}
