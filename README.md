@@ -15,13 +15,17 @@ The grammar is clean of implementation language and is written in ANTLR. It happ
 Running
 =======
 
-Save the following to `a.pinn`:
+Save the following to `hello.pinn`:
 
 > func main ( ) {
 > 	print ("Hello, world.");
 > }
 
-Then compile the ANTLR code and run `go run -f a.pinn`. You should see:
+Then run the ANTLR code and run `go run -f hello.pinn`. You should see:
 
 > Hello, world.
 
+Running ANTLR
+-------------
+
+* `java -jar <path to antlr jar> -Dlanguage=Go -o pparser Pinn.g4`
