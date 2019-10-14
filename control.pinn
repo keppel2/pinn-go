@@ -2,11 +2,11 @@ func main ( )
 {
 	valA := 747;
 	if (valA == 474) { print("bad"); } else if (valA == 747) { print(valA); } else { print("worse"); }
-	fo i int = 0; i < 5; i = i + 1 {
+	for i int = 0; i < 5; i = i + 1 {
 		print (i );
 	}
 	j int = 3 ;
-	wh j > 0 {
+	while j > 0 {
 		j = j - 1 ;
 		print (j );
 	}
@@ -22,14 +22,14 @@ func main ( )
 	}
 	if k == "baz" { print ("bad") ; } else { print (k) ; }
 	x int = 5 ;
-	wh x < 100 {
+	while x < 100 {
 		x = x + 1 ;
 		if x > 42 {
 			break;
 		}
 	}
 	print (x);
-	fo i = 20; i > 10; i = i - 1 {
+	for i = 20; i > 10; i = i - 1 {
 		if i > 15 {
 			continue;
 		}
@@ -81,7 +81,7 @@ func main ( )
 
 	key string;
 	value char;
-	fo key, value = range m {
+	for key, value = range m {
 	if key == "bad" {
 		continue;
 	}
@@ -92,12 +92,12 @@ func main ( )
 	key2 int;
 	val2 int;
 	arr [fill]int = 10, 15, 20;
-	fo key2, val2 = range arr {
+	for key2, val2 = range arr {
 	print(key2);
 	print(val2);
 	}
 
-	fo key2, val2 = range (101:105) {
+	for key2, val2 = range (101:105) {
 	print(val2);
 	}
 

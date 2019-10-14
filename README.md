@@ -7,6 +7,8 @@ Pinn is a computer language that is heavily influenced by Go. It is statically t
 
 * Syntax taken from a variety of languages. Unopiniated about which the user should use.
 * Markedly reduced numeric types.
+* Built-in numeric big and float types.
+
 
 ## Specification
 
@@ -31,3 +33,34 @@ Running ANTLR
 -------------
 
 * `java -jar <path_to_antlr_jar> -Dlanguage=Go -o pparser Pinn.g4`
+
+# Elements
+
+## Lexical
+
+Most lexical elements are borrowed from Go.
+
+## Element Types
+
+* `int`. Always a signed 64-bit.
+* `bool`. Standard, `true` or `false`.
+* `unit`. Can only be `iota`. As a special case, getting an element from a map of unit will return `true` if the key is defined (to `iota`), and `false` otherwise.
+* `string`. Immutable. Indexed into characters.
+* `big`. Big integer.
+* `float`. Big float. See Go.
+* `char`. Character. Implemented as UTF-32.
+
+## Group Types
+
+* Scalar is a single element.
+* `map`. Key is always a string.
+* `slice`. Pointer to a region of an array or slice. See Go.
+* `array`. Arrays are passed by value.
+
+## Expressions
+
+* Almost all taken from Go, so much like c/Java. Conditional expression was put back in.
+
+## Statements
+
+Taken from Go, with some variations.

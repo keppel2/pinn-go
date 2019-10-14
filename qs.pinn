@@ -15,7 +15,7 @@ func partition(p int, r int) int
 	i int = p - 1;
 	j int;
 	temp int;
-	fo j = p; j <= r - 1; j++ {
+	for j = p; j <= r - 1; j++ {
 		if A[j] <= x {
 			i++;
 			temp = A[i];

@@ -87,14 +87,14 @@ ifStatement
   | 'if' expr block 'else' ifStatement;
 
 whStatement
-  : 'wh' expr block ;
+  : 'while' expr block ;
 
 RANGE : 'range' ;
 
 foStatement
-  : 'fo' (varDecl | fss=simpleStatement)? ';' expr ';' sss=simpleStatement block
-  | 'fo' ID ',' ID '=' RANGE expr block |
-    'fo' ID '=' RANGE expr block ;
+  : 'for' (varDecl | fss=simpleStatement)? ';' expr ';' sss=simpleStatement block
+  | 'for' ID ',' ID '=' RANGE expr block |
+    'for' ID '=' RANGE expr block ;
 caseStatement
   : 'case' exprList COLON statement* ;
 

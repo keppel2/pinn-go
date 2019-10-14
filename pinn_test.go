@@ -76,8 +76,8 @@ func TestControl(t *testing.T) {
 func TestData(t *testing.T) {
 	testFile(t, "data")
 }
-func TestFunky(t *testing.T) {
-	testFile(t, "funky")
+func TestFunc(t *testing.T) {
+	testFile(t, "func")
 }
 
 func TestQs(t *testing.T) {

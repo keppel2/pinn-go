@@ -22,7 +22,7 @@ func main ()
 	print (len (ba));
 
 	print (len (bm));
-	fo bm["10"] += 1; bm["10"] < 44; bm["10"] += 1 {
+	for bm["10"] += 1; bm["10"] < 44; bm["10"] += 1 {
 		print (bm["10"]);
 	}
 	ba[1] = 3;
