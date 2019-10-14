@@ -14,16 +14,224 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 	oldPrc := gv.Prc
 	gv.Prc = actx
 	switch ctx := actx.(type) {
+	case *parser.CaseStatementContext:
+		v := args[0].(*types.PVal)
+
+		if gv.Fc.Path == types.PFallthrough || visitGeneric(ctx.ExprList(), gv, v).(bool) {
+			rt = true
+			if gv.Fc.Path == types.PFallthrough {
+				gv.Fc.Path = types.PNormal
+			}
+		cloop:
+			for _, child := range ctx.AllStatement() {
+				visitGeneric(child, gv)
+				switch gv.Fc.Path {
+				case types.PContinue, types.PExiting, types.PFallthrough:
+					break cloop
+				case types.PBreak:
+					gv.Fc.Path = types.PNormal
+					break cloop
+				}
+			}
+		} else {
+			rt = false
+		}
+
+	case *parser.SwitchStatementContext:
+		v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+		broken := false
+		for _, child := range ctx.AllCaseStatement() {
+			if visitGeneric(child, gv, v).(bool) {
+				broken = true
+				if gv.Fc.Path == types.PFallthrough {
+					broken = false
+					continue
+				}
+				break
+			}
+		}
+		if !broken {
+			if gv.Fc.Path == types.PFallthrough {
+				gv.Fc.Path = types.PNormal
+			}
+		loop:
+			for _, child := range ctx.AllStatement() {
+				visitGeneric(child, gv)
+				switch gv.Fc.Path {
+				case types.PContinue, types.PExiting:
+					break loop
+				case types.PBreak:
+					gv.Fc.Path = types.PNormal
+					break loop
+				}
+			}
+		}
+
+	case *parser.StatementContext:
+		switch v := ctx.GetChild(0).(type) {
+		case antlr.TerminalNode:
+			switch v.GetText() {
+			case "break":
+				gv.Fc.Path = types.PBreak
+			case "continue":
+				gv.Fc.Path = types.PContinue
+			case "fallthrough":
+				gv.Fc.Path = types.PFallthrough
+			case "debug":
+				dbg(gv)
+			case ";":
+			default:
+				panic(types.ErrCase)
+			}
+
+		default:
+			visitGeneric(v.(antlr.ParserRuleContext), gv)
+		}
+
+	case *parser.WhStatementContext:
+		v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+		for v.GetBool() {
+			visitGeneric(ctx.Block(), gv)
+			if gv.PathEndBlock() {
+				break
+			}
+			v = visitGeneric(ctx.Expr(), gv).(*types.PVal)
+		}
+	case *parser.FoStatementContext:
+		if ctx.RANGE() != nil {
+			ids := ctx.AllID()
+			valueOnly := len(ids) == 1
+			var value *types.PVal
+			var key *types.PVal
+			if valueOnly {
+				value = gv.GetPv(ids[0].GetText())
+			} else {
+				value = gv.GetPv(ids[1].GetText())
+			}
+			if !valueOnly {
+				key = gv.GetPv(ids[0].GetText())
+			}
+			ranger := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			switch ranger.GetKind().GType {
+			case types.GArray, types.GSlice:
+				for x := 0; x < ranger.GetKind().Int; x++ {
+
+					if !valueOnly {
+						key.Set(nil, int64(x))
+					}
+					value.Set(nil, ranger.Get(x))
+					visitGeneric(ctx.Block(), gv)
+					if gv.PathEndBlock() {
+						break
+					}
+				}
+			case types.GMap:
+				keys := ranger.GetKeys()
+				for _, str := range keys {
+					if !valueOnly {
+						key.Set(nil, str)
+					}
+					value.Set(nil, ranger.Get(str))
+					visitGeneric(ctx.Block(), gv)
+					if gv.PathEndBlock() {
+						break
+					}
+				}
+			default:
+				panic(types.ErrCase)
+			}
+		} else {
+			if n := ctx.VarDecl(); n != nil {
+				visitGeneric(n, gv)
+			} else if n := ctx.GetFss(); n != nil {
+				visitGeneric(n, gv)
+			}
+			v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			for v.GetBool() {
+				visitGeneric(ctx.Block(), gv)
+				if gv.PathEndBlock() {
+					break
+				}
+				visitGeneric(ctx.GetSss(), gv)
+				v = visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			}
+		}
+
+	case *parser.IfStatementContext:
+		v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+		if v.GetBool() {
+			visitGeneric(ctx.AllBlock()[0], gv)
+		} else {
+			if ctx.Block(1) != nil {
+				visitGeneric(ctx.Block(1), gv)
+			}
+		}
+
 	case *parser.FuncExprContext:
-		rt = visitFuncExpr(ctx, gv)
+
+		switch ctx.GetStart().GetText() {
+		case "len":
+			str := ctx.ID().GetText()
+			v := gv.GetPv(str)
+			if v.GetKind().GType == types.GScalar {
+				panic(types.ErrWrongType)
+			}
+			rt = types.NewScalarPval(int64(v.GetKind().Int))
+		case "strLen":
+			e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			rt = types.NewScalarPval(int64(len(e.GetString())))
+		case "stringValue":
+			e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			rt = types.NewScalarPval(e.String())
+		case "print":
+			s := visitGeneric(ctx.ExprList(), gv).([]*types.PVal)
+			if len(s) == 1 {
+
+				globalPrinter.print(fmt.Sprint(s[0]))
+			} else {
+				globalPrinter.print(fmt.Sprint(s))
+			}
+			globalPrinter.print("\n")
+		case "printB":
+			e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			switch e.GetKind().VType {
+			case types.TInt:
+				globalPrinter.print(fmt.Sprintf("%b", e.GetInt()))
+			case types.TBig:
+				globalPrinter.print(e.GetBig().Text(2))
+			default:
+				panic(types.ErrCase)
+			}
+			globalPrinter.print("\n")
+		case "printH":
+			e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			switch e.GetKind().VType {
+			case types.TInt:
+				globalPrinter.print(fmt.Sprintf("%x", e.GetInt()))
+			case types.TBig:
+				globalPrinter.print(e.GetBig().Text(16))
+			case types.TBigf:
+				str := floatToHex(e.GetBigf().Text('p', 0))
+				globalPrinter.print(str)
+			default:
+				panic(types.ErrCase)
+			}
+			globalPrinter.print("\n")
+		case "delete":
+			e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			v := gv.GetPv(ctx.ID().GetText())
+			v.DeleteKey(e.GetString())
+		default:
+			panic(types.ErrCase)
+		}
 
 	case *parser.ExprContext:
 		if ctx.IndexExpr() != nil {
-			rt = visitGeneric(ctx.IndexExpr(), gv).(*types.PVal)
+			rt = visitGeneric(ctx.IndexExpr(), gv)
 			break
 		}
 		if ctx.FuncExpr() != nil {
-			rt = visitGeneric(ctx.FuncExpr(), gv).(*types.PVal)
+			rt = visitGeneric(ctx.FuncExpr(), gv)
 			break
 		}
 		schildren, _ := symTokens(ctx)
@@ -235,7 +443,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 	case *parser.BlockContext:
 		for _, child := range ctx.AllStatement() {
-			visitStatement(child, gv)
+			visitGeneric(child, gv)
 			if !gv.IsPathNormal() {
 				break
 			}
@@ -369,247 +577,9 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 }
 
-func visitFuncExpr(ctx *parser.FuncExprContext, gv *types.GVal) *types.PVal {
-	var rt *types.PVal
-	switch ctx.GetStart().GetText() {
-	case "len":
-		str := ctx.ID().GetText()
-		v := gv.GetPv(str)
-		if v.GetKind().GType == types.GScalar {
-			panic(types.ErrWrongType)
-		}
-		rt = types.NewScalarPval(int64(v.GetKind().Int))
-	case "strLen":
-		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-		rt = types.NewScalarPval(int64(len(e.GetString())))
-	case "stringValue":
-		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-		rt = types.NewScalarPval(e.String())
-	case "print":
-		s := visitGeneric(ctx.ExprList(), gv).([]*types.PVal)
-		if len(s) == 1 {
-
-			globalPrinter.print(fmt.Sprint(s[0]))
-		} else {
-			globalPrinter.print(fmt.Sprint(s))
-		}
-		globalPrinter.print("\n")
-	case "printB":
-		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-		switch e.GetKind().VType {
-		case types.TInt:
-			globalPrinter.print(fmt.Sprintf("%b", e.GetInt()))
-		case types.TBig:
-			globalPrinter.print(e.GetBig().Text(2))
-		default:
-			panic(types.ErrCase)
-		}
-		globalPrinter.print("\n")
-	case "printH":
-		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-		switch e.GetKind().VType {
-		case types.TInt:
-			globalPrinter.print(fmt.Sprintf("%x", e.GetInt()))
-		case types.TBig:
-			globalPrinter.print(e.GetBig().Text(16))
-		case types.TBigf:
-			str := floatToHex(e.GetBigf().Text('p', 0))
-			globalPrinter.print(str)
-		default:
-			panic(types.ErrCase)
-		}
-		globalPrinter.print("\n")
-	case "delete":
-		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-		v := gv.GetPv(ctx.ID().GetText())
-		v.DeleteKey(e.GetString())
-	default:
-		panic(types.ErrCase)
-	}
-	return rt
-}
-
-func visitFoStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
-	ctx := actx.(*parser.FoStatementContext)
-	gv.Prc = ctx
-	if ctx.RANGE() != nil {
-		ids := ctx.AllID()
-		valueOnly := len(ids) == 1
-		var value *types.PVal
-		var key *types.PVal
-		if valueOnly {
-			value = gv.GetPv(ids[0].GetText())
-		} else {
-			value = gv.GetPv(ids[1].GetText())
-		}
-		if !valueOnly {
-			key = gv.GetPv(ids[0].GetText())
-		}
-		ranger := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-		switch ranger.GetKind().GType {
-		case types.GArray, types.GSlice:
-			for x := 0; x < ranger.GetKind().Int; x++ {
-
-				if !valueOnly {
-					key.Set(nil, int64(x))
-				}
-				value.Set(nil, ranger.Get(x))
-				visitGeneric(ctx.Block(), gv)
-				if gv.PathEndBlock() {
-					return
-				}
-			}
-		case types.GMap:
-			keys := ranger.GetKeys()
-			for _, str := range keys {
-				if !valueOnly {
-					key.Set(nil, str)
-				}
-				value.Set(nil, ranger.Get(str))
-				visitGeneric(ctx.Block(), gv)
-				if gv.PathEndBlock() {
-					return
-				}
-			}
-		default:
-			panic(types.ErrCase)
-		}
-		return
-	}
-	if n := ctx.VarDecl(); n != nil {
-		visitGeneric(n, gv)
-	} else if n := ctx.GetFss(); n != nil {
-		visitGeneric(n, gv)
-	}
-	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-	for v.GetBool() {
-		visitGeneric(ctx.Block(), gv)
-		if gv.PathEndBlock() {
-			return
-		}
-		visitGeneric(ctx.GetSss(), gv)
-		v = visitGeneric(ctx.Expr(), gv).(*types.PVal)
-	}
-}
-
-func visitWhStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
-	ctx := actx.(*parser.WhStatementContext)
-	gv.Prc = ctx
-	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-	for v.GetBool() {
-		visitGeneric(ctx.Block(), gv)
-		if gv.PathEndBlock() {
-			return
-		}
-		v = visitGeneric(ctx.Expr(), gv).(*types.PVal)
-	}
-}
-
-func visitCaseStatement(actx antlr.ParserRuleContext, gv *types.GVal, v *types.PVal) bool {
-	ctx := actx.(*parser.CaseStatementContext)
-	gv.Prc = ctx
-	if gv.Fc.Path == types.PFallthrough || visitGeneric(ctx.ExprList(), gv, v).(bool) {
-		if gv.Fc.Path == types.PFallthrough {
-			gv.Fc.Path = types.PNormal
-		}
-	loop:
-		for _, child := range ctx.AllStatement() {
-			visitStatement(child, gv)
-			switch gv.Fc.Path {
-			case types.PContinue, types.PExiting, types.PFallthrough:
-				break loop
-			case types.PBreak:
-				gv.Fc.Path = types.PNormal
-				break loop
-			}
-		}
-		return true
-	}
-	return false
-}
-
-func visitSwitchStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
-	ctx := actx.(*parser.SwitchStatementContext)
-	gv.Prc = ctx
-	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-	broken := false
-	for _, child := range ctx.AllCaseStatement() {
-		if visitCaseStatement(child, gv, v) {
-			broken = true
-			if gv.Fc.Path == types.PFallthrough {
-				broken = false
-				continue
-			}
-			break
-		}
-	}
-	if !broken {
-		if gv.Fc.Path == types.PFallthrough {
-			gv.Fc.Path = types.PNormal
-		}
-	loop:
-		for _, child := range ctx.AllStatement() {
-			visitStatement(child, gv)
-			switch gv.Fc.Path {
-			case types.PContinue, types.PExiting:
-				break loop
-			case types.PBreak:
-				gv.Fc.Path = types.PNormal
-				break loop
-			}
-		}
-	}
-}
-
-func visitIfStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
-	ctx := actx.(*parser.IfStatementContext)
-	gv.Prc = ctx
-	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
-	if v.GetBool() {
-		visitGeneric(ctx.AllBlock()[0], gv)
-	} else {
-		if ctx.Block(1) != nil {
-			visitGeneric(ctx.Block(1), gv)
-		}
-	}
-}
-
-func visitStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
-	ctx := actx.(*parser.StatementContext)
-	gv.Prc = ctx
-	switch v := ctx.GetChild(0).(type) {
-	case *parser.ExprContext:
-		_ = visitGeneric(v, gv).(*types.PVal)
-	case *parser.IfStatementContext:
-		visitIfStatement(v, gv)
-	case *parser.WhStatementContext:
-		visitWhStatement(v, gv)
-	case *parser.FoStatementContext:
-		visitFoStatement(v, gv)
-	case *parser.SwitchStatementContext:
-		visitSwitchStatement(v, gv)
-	case antlr.TerminalNode:
-		switch v.GetText() {
-		case "break":
-			gv.Fc.Path = types.PBreak
-		case "continue":
-			gv.Fc.Path = types.PContinue
-		case "fallthrough":
-			gv.Fc.Path = types.PFallthrough
-		case "debug":
-			dbg(gv)
-		case ";":
-		default:
-			panic(types.ErrCase)
-		}
-
-	default:
-		visitGeneric(v.(antlr.ParserRuleContext), gv)
-	}
-}
-
 func visitFunction(actx antlr.ParserRuleContext, s []*types.PVal, str string, gv *types.GVal) *types.PVal {
 	ctx := actx.(*parser.FunctionContext)
+	oldPrc := gv.Prc
 	gv.Prc = ctx
 	gv.PushFrame()
 	oldfc := gv.Fc
@@ -632,6 +602,7 @@ func visitFunction(actx antlr.ParserRuleContext, s []*types.PVal, str string, gv
 	}
 	rt := gv.Fc.Rt
 	gv.Fc = oldfc
+	gv.Prc = oldPrc
 	return rt
 }
 
