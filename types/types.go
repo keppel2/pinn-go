@@ -5,16 +5,8 @@ import "../pparser"
 
 import "fmt"
 
-//import "strconv"
-
-//import "strings"
-//import "io/ioutil"
-
-//import "io"
-//import "os"
 import "errors"
 import "math/big"
-//import "flag"
 var (
 	ErrParamLength    = errors.New("Parameter length mismatch.")
 	ErrWrongStatement = errors.New("Wrong statement.")
@@ -35,7 +27,6 @@ const (
 	GMap
 )
 
-//func (gType) String() string { return "wut up g" }
 
 type VType int
 
@@ -217,7 +208,7 @@ func (p PVal) Slice(lhs int, rhs int) *PVal {
 }
 
 func (p *PVal) Invalid() bool {
-	return p == nil //p.v == tInvalid || p.g == gInvalid
+	return p == nil 
 }
 
 func (p PVal) GetKeys() []string {

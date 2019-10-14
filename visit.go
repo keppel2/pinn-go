@@ -9,23 +9,162 @@ import "fmt"
 import "strconv"
 import "math/big"
 
-func visitExprListBool(actx antlr.ParserRuleContext, gv *types.GVal, v *types.PVal) bool {
-	ctx := actx.(*parser.ExprListContext)
-	gv.Prc = ctx
-	for _, child := range ctx.AllExpr() {
-		v2 := visitExpr(child, gv)
-		if v.Equal(v2) {
-			return true
-		}
-	}
-	return false
-}
-
 func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interface{}) interface{} {
 	var rt interface{}
 	oldPrc := gv.Prc
 	gv.Prc = actx
 	switch ctx := actx.(type) {
+	case *parser.FuncExprContext:
+		rt = visitFuncExpr(ctx, gv)
+
+	case *parser.ExprContext:
+		if ctx.IndexExpr() != nil {
+			rt = visitGeneric(ctx.IndexExpr(), gv).(*types.PVal)
+			break
+		}
+		if ctx.FuncExpr() != nil {
+			rt = visitGeneric(ctx.FuncExpr(), gv).(*types.PVal)
+			break
+		}
+		schildren, _ := symTokens(ctx)
+		if ctx.GetChildCount() == 1 {
+			tok := schildren[0]
+			switch tok.GetTokenType() {
+			case parser.PinnParserID:
+				v := gv.GetPv(tok.GetText())
+				if v.GetKind().GType == types.GMap || v.GetKind().GType == types.GSlice || v.GetKind().GType == types.GScalar {
+					rt = v
+				} else {
+					rt = v.Clone()
+				}
+			case parser.PinnParserINT:
+				x, _ := strconv.ParseInt(tok.GetText(), 0, 64)
+				rt = types.NewScalarPval(x)
+			case parser.PinnParserFLOAT:
+				str := floatToDec(tok.GetText())
+				bf, _, _ := new(big.Float).Parse(str, 0)
+				rt = types.NewScalarPval(bf)
+			case parser.PinnParserBOOL:
+				switch tok.GetText() {
+				case "true":
+					rt = types.NewScalarPval(true)
+				case "false":
+					rt = types.NewScalarPval(false)
+				default:
+					panic(types.ErrCase)
+				}
+			case parser.PinnParserSTRING:
+				str := tok.GetText()
+				rt = types.NewScalarPval(str[1 : len(str)-1])
+			case parser.PinnParserCHAR:
+				str := tok.GetText()
+				str = str[1 : len(str)-1]
+
+				for _, rune := range str {
+					rt = types.NewScalarPval(rune)
+				}
+			case parser.PinnParserIOTA:
+				rt = types.NewScalarPval(nil)
+			default:
+				panic(types.ErrCase)
+			}
+			break
+		}
+		first := ctx.GetChild(0)
+		switch v := first.(type) {
+		case antlr.TerminalNode:
+			id := v.GetText()
+			switch id {
+			case "(":
+				if ctx.COLON() == nil {
+					rt = visitGeneric(ctx.Expr(0), gv).(*types.PVal)
+				} else {
+					var lhsv int64 = 0
+					if e := ctx.GetFirstExpr(); e != nil {
+						lhsv = visitGeneric(e, gv).(*types.PVal).GetInt()
+					}
+					rhsv := visitGeneric(ctx.GetSecondExpr(), gv).(*types.PVal).GetInt()
+					if rhsv-lhsv < 0 {
+						panic(types.ErrRange)
+					}
+					rt = types.NewPval(types.GArray, types.TInt, int(rhsv-lhsv))
+					for x := lhsv; x < rhsv; x += 1 {
+						rt.(*types.PVal).Set(int(x-lhsv), x)
+					}
+				}
+			case "-":
+				e := visitGeneric(ctx.Expr(0), gv).(*types.PVal)
+				switch e.GetKind().VType {
+				case types.TInt:
+					rt = types.NewScalarPval(-e.GetInt())
+				case types.TBig:
+					rt = types.NewScalarPval(new(big.Int).Neg(e.GetBig()))
+				case types.TBigf:
+					rt = types.NewScalarPval(new(big.Float).Neg(e.GetBigf()))
+				default:
+					panic(types.ErrCase)
+				}
+			case "!":
+				e := visitGeneric(ctx.Expr(0), gv).(*types.PVal)
+				rt = types.NewScalarPval(!e.GetBool())
+			case "^":
+				e := visitGeneric(ctx.Expr(0), gv).(*types.PVal)
+				switch e.GetKind().VType {
+				case types.TInt:
+					rt = types.NewScalarPval(^e.GetInt())
+				case types.TBig:
+					rt = types.NewScalarPval(new(big.Int).Not(e.GetBig()))
+				default:
+					panic(types.ErrCase)
+				}
+
+			default:
+				id = ctx.ID().GetText()
+				brace := ctx.GetChild(1).(antlr.TerminalNode).GetSymbol().GetTokenType()
+				switch brace {
+
+				case parser.PinnParserLPAREN:
+					s := make([]*types.PVal, 0)
+					if eL := ctx.ExprList(); eL != nil {
+						s = visitGeneric(eL, gv).([]*types.PVal)
+					}
+					rt = visitFunction(gv.Fkmap[id].FunctionContext, s, id, gv)
+				default:
+					panic(types.ErrCase)
+				}
+			}
+		case *parser.ExprContext:
+			op := ctx.GetChild(1).(antlr.TerminalNode).GetText()
+			lhs := visitGeneric(v, gv).(*types.PVal)
+			if op == "?" {
+				b := lhs.GetBool()
+				if b {
+					rt = visitGeneric(ctx.Expr(1), gv).(*types.PVal)
+				} else {
+					rt = visitGeneric(ctx.Expr(2), gv).(*types.PVal)
+				}
+			} else if op == "&&" {
+				lhsv := lhs.GetBool()
+				if !lhsv {
+					rt = types.NewScalarPval(false)
+					break
+				}
+				rhs := visitGeneric(ctx.Expr(1), gv).(*types.PVal)
+				rt = types.NewScalarPval(rhs.GetBool())
+			} else if op == "||" {
+				lhsv := lhs.GetBool()
+				if lhsv {
+					rt = types.NewScalarPval(true)
+					break
+				}
+				rhs := visitGeneric(ctx.Expr(1), gv).(*types.PVal)
+				rt = types.NewScalarPval(rhs.GetBool())
+			} else {
+
+				rhs := visitGeneric(ctx.Expr(1), gv).(*types.PVal)
+				rt = doOp(ctx, lhs, rhs, op)
+			}
+		}
 
 	case *parser.SimpleStatementContext:
 
@@ -38,7 +177,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 					var result *types.PVal
 					v2 := gv.GetPv(ctx.ID().GetText())
 					if ctx.Expr() != nil {
-						indexE := visitExpr(ctx.Expr(), gv)
+						indexE := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 						index := types.FixIndex(indexE.GetInterface())
 						lhs := types.NewScalarPval(v2.Get(index))
 						result = doOp(ctx, lhs, nil, opString)
@@ -58,10 +197,22 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		}
 
 	case *parser.ExprListContext:
-		rt = make([]*types.PVal, 0, 10)
-		for _, child := range ctx.AllExpr() {
-			v := visitExpr(child, gv)
-			rt = append(rt.([]*types.PVal), v)
+		if args != nil {
+			v := args[0].(*types.PVal)
+			rt = false
+			for _, child := range ctx.AllExpr() {
+				v2 := visitGeneric(child, gv).(*types.PVal)
+				if v.Equal(v2) {
+					rt = true
+					break
+				}
+			}
+		} else {
+			rt = make([]*types.PVal, 0, 10)
+			for _, child := range ctx.AllExpr() {
+				v := visitGeneric(child, gv).(*types.PVal)
+				rt = append(rt.([]*types.PVal), v)
+			}
 		}
 
 	case *parser.CompoundSetContext:
@@ -71,13 +222,13 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		op := children[len(children)-3].(antlr.TerminalNode).GetText()
 		exprs := ctx.AllExpr()
 		if len(exprs) == 2 {
-			v2 := visitExpr(exprs[0], gv)
-			rhs := visitExpr(exprs[1], gv)
+			v2 := visitGeneric(exprs[0], gv).(*types.PVal)
+			rhs := visitGeneric(exprs[1], gv).(*types.PVal)
 			lhs := types.NewScalarPval(v.Get(types.FixIndex(v2.GetInterface())))
 			result := doOp(ctx, lhs, rhs, op)
 			v.Set(types.FixIndex(v2.GetInterface()), result.GetInterface())
 		} else {
-			e := visitExpr(exprs[0], gv)
+			e := visitGeneric(exprs[0], gv).(*types.PVal)
 			result := doOp(ctx, v, e, op)
 			v.Set(nil, result.GetInterface())
 		}
@@ -103,7 +254,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			panic(types.ErrReDeclare)
 		}
 		if ctx.CE() != nil {
-			e := visitExpr(ctx.Expr(), gv)
+			e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 			f.M[strID] = e
 			break
 		}
@@ -154,7 +305,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			rt = types.NewKind(types.GScalar, t, 1)
 		} else {
 			if ctx.Expr() != nil {
-				v := visitExpr(ctx.Expr(), gv)
+				v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 				x := int(v.GetInt())
 				if x == -1 {
 					panic(types.ErrRange)
@@ -175,18 +326,18 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		gv.Fc.Path = types.PExiting
 		i := ctx.Expr()
 		if i != nil {
-			gv.Fc.Rt = visitExpr(i, gv)
+			gv.Fc.Rt = visitGeneric(i, gv).(*types.PVal)
 		}
 	case *parser.SimpleSetContext:
 		str := ctx.ID().GetText()
 		v := gv.GetPv(str)
 		exprs := ctx.AllExpr()
 		if len(exprs) == 2 {
-			v2 := visitExpr(exprs[0], gv)
-			e := visitExpr(exprs[1], gv)
+			v2 := visitGeneric(exprs[0], gv).(*types.PVal)
+			e := visitGeneric(exprs[1], gv).(*types.PVal)
 			v.Set(types.FixIndex(v2.GetInterface()), e.GetInterface())
 		} else {
-			e := visitExpr(exprs[0], gv)
+			e := visitGeneric(exprs[0], gv).(*types.PVal)
 			if e.GetKind().GType == types.GScalar {
 				v.Set(nil, e.GetInterface())
 			} else {
@@ -199,15 +350,15 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		if ctx.COLON() != nil {
 			lhsv := 0
 			if e := ctx.GetFirst(); e != nil {
-				lhsv = int(visitExpr(e, gv).GetInt())
+				lhsv = int(visitGeneric(e, gv).(*types.PVal).GetInt())
 			}
 			rhsv := v.GetKind().Int
 			if e := ctx.GetSecond(); e != nil {
-				rhsv = int(visitExpr(e, gv).GetInt())
+				rhsv = int(visitGeneric(e, gv).(*types.PVal).GetInt())
 			}
 			rt = v.Slice(lhsv, rhsv)
 		} else {
-			e := visitExpr(ctx.Expr(0), gv)
+			e := visitGeneric(ctx.Expr(0), gv).(*types.PVal)
 			rt = types.NewScalarPval(v.Get(types.FixIndex(e.GetInterface())))
 		}
 	default:
@@ -218,9 +369,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 }
 
-func visitFuncExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
-	ctx := actx.(*parser.FuncExprContext)
-	gv.Prc = ctx
+func visitFuncExpr(ctx *parser.FuncExprContext, gv *types.GVal) *types.PVal {
 	var rt *types.PVal
 	switch ctx.GetStart().GetText() {
 	case "len":
@@ -231,10 +380,10 @@ func visitFuncExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
 		}
 		rt = types.NewScalarPval(int64(v.GetKind().Int))
 	case "strLen":
-		e := visitExpr(ctx.Expr(), gv)
+		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 		rt = types.NewScalarPval(int64(len(e.GetString())))
 	case "stringValue":
-		e := visitExpr(ctx.Expr(), gv)
+		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 		rt = types.NewScalarPval(e.String())
 	case "print":
 		s := visitGeneric(ctx.ExprList(), gv).([]*types.PVal)
@@ -246,7 +395,7 @@ func visitFuncExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
 		}
 		globalPrinter.print("\n")
 	case "printB":
-		e := visitExpr(ctx.Expr(), gv)
+		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 		switch e.GetKind().VType {
 		case types.TInt:
 			globalPrinter.print(fmt.Sprintf("%b", e.GetInt()))
@@ -257,7 +406,7 @@ func visitFuncExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
 		}
 		globalPrinter.print("\n")
 	case "printH":
-		e := visitExpr(ctx.Expr(), gv)
+		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 		switch e.GetKind().VType {
 		case types.TInt:
 			globalPrinter.print(fmt.Sprintf("%x", e.GetInt()))
@@ -271,166 +420,12 @@ func visitFuncExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
 		}
 		globalPrinter.print("\n")
 	case "delete":
-		e := visitExpr(ctx.Expr(), gv)
+		e := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 		v := gv.GetPv(ctx.ID().GetText())
 		v.DeleteKey(e.GetString())
 	default:
 		panic(types.ErrCase)
 	}
-	return rt
-}
-
-func visitExpr(actx antlr.ParserRuleContext, gv *types.GVal) *types.PVal {
-	ctx := actx.(*parser.ExprContext)
-	gv.Prc = ctx
-	var rt *types.PVal
-	if ctx.IndexExpr() != nil {
-		return visitGeneric(ctx.IndexExpr(), gv).(*types.PVal)
-	}
-	if ctx.FuncExpr() != nil {
-		return visitFuncExpr(ctx.FuncExpr(), gv)
-	}
-	schildren, _ := symTokens(ctx)
-	if ctx.GetChildCount() == 1 {
-		tok := schildren[0]
-		switch tok.GetTokenType() {
-		case parser.PinnParserID:
-			v := gv.GetPv(tok.GetText())
-			if v.GetKind().GType == types.GMap || v.GetKind().GType == types.GSlice || v.GetKind().GType == types.GScalar {
-				rt = v
-			} else {
-				rt = v.Clone()
-			}
-		case parser.PinnParserINT:
-			x, _ := strconv.ParseInt(tok.GetText(), 0, 64)
-			rt = types.NewScalarPval(x)
-		case parser.PinnParserFLOAT:
-			str := floatToDec(tok.GetText())
-			bf, _, _ := new(big.Float).Parse(str, 0)
-			rt = types.NewScalarPval(bf)
-		case parser.PinnParserBOOL:
-			switch tok.GetText() {
-			case "true":
-				rt = types.NewScalarPval(true)
-			case "false":
-				rt = types.NewScalarPval(false)
-			default:
-				panic(types.ErrCase)
-			}
-		case parser.PinnParserSTRING:
-			str := tok.GetText()
-			rt = types.NewScalarPval(str[1 : len(str)-1])
-		case parser.PinnParserCHAR:
-			str := tok.GetText()
-			str = str[1 : len(str)-1]
-
-			for _, rune := range str {
-				rt = types.NewScalarPval(rune)
-			}
-		case parser.PinnParserIOTA:
-			rt = types.NewScalarPval(nil)
-		default:
-			panic(types.ErrCase)
-		}
-		return rt
-	}
-	first := ctx.GetChild(0)
-	switch v := first.(type) {
-	case antlr.TerminalNode:
-		id := v.GetText()
-		switch id {
-		case "(":
-			if ctx.COLON() == nil {
-				rt = visitExpr(ctx.Expr(0), gv)
-			} else {
-				var lhsv int64 = 0
-				if e := ctx.GetFirstExpr(); e != nil {
-					lhsv = visitExpr(e, gv).GetInt()
-				}
-				rhsv := visitExpr(ctx.GetSecondExpr(), gv).GetInt()
-				if rhsv-lhsv < 0 {
-					panic(types.ErrRange)
-				}
-				rt := types.NewPval(types.GArray, types.TInt, int(rhsv-lhsv))
-				for x := lhsv; x < rhsv; x += 1 {
-					rt.Set(int(x-lhsv), x)
-				}
-				return rt
-			}
-		case "-":
-			e := visitExpr(ctx.Expr(0), gv)
-			switch e.GetKind().VType {
-			case types.TInt:
-				rt = types.NewScalarPval(-e.GetInt())
-			case types.TBig:
-				rt = types.NewScalarPval(new(big.Int).Neg(e.GetBig()))
-			case types.TBigf:
-				rt = types.NewScalarPval(new(big.Float).Neg(e.GetBigf()))
-			default:
-				panic(types.ErrCase)
-			}
-		case "!":
-			e := visitExpr(ctx.Expr(0), gv)
-			rt = types.NewScalarPval(!e.GetBool())
-		case "^":
-			e := visitExpr(ctx.Expr(0), gv)
-			switch e.GetKind().VType {
-			case types.TInt:
-				rt = types.NewScalarPval(^e.GetInt())
-			case types.TBig:
-				rt = types.NewScalarPval(new(big.Int).Not(e.GetBig()))
-			default:
-				panic(types.ErrCase)
-			}
-
-		default:
-			id = ctx.ID().GetText()
-			brace := ctx.GetChild(1).(antlr.TerminalNode).GetSymbol().GetTokenType()
-			switch brace {
-
-			case parser.PinnParserLPAREN:
-				s := make([]*types.PVal, 0)
-				if eL := ctx.ExprList(); eL != nil {
-					s = visitGeneric(eL, gv).([]*types.PVal)
-				}
-				rt = visitFunction(gv.Fkmap[id].FunctionContext, s, id, gv)
-			default:
-				panic(types.ErrCase)
-			}
-		}
-	case *parser.ExprContext:
-		op := ctx.GetChild(1).(antlr.TerminalNode).GetText()
-		lhs := visitExpr(v, gv)
-		if op == "?" {
-			b := lhs.GetBool()
-			if b {
-				return visitExpr(ctx.Expr(1), gv)
-			}
-			return visitExpr(ctx.Expr(2), gv)
-		}
-		if op == "&&" {
-			lhsv := lhs.GetBool()
-			if !lhsv {
-				rt = types.NewScalarPval(false)
-				break
-			}
-			rhs := visitExpr(ctx.Expr(1), gv)
-			return types.NewScalarPval(rhs.GetBool())
-		}
-		if op == "||" {
-			lhsv := lhs.GetBool()
-			if lhsv {
-				rt = types.NewScalarPval(true)
-				break
-			}
-			rhs := visitExpr(ctx.Expr(1), gv)
-			return types.NewScalarPval(rhs.GetBool())
-		}
-
-		rhs := visitExpr(ctx.Expr(1), gv)
-		rt = doOp(ctx, lhs, rhs, op)
-	}
-
 	return rt
 }
 
@@ -450,7 +445,7 @@ func visitFoStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 		if !valueOnly {
 			key = gv.GetPv(ids[0].GetText())
 		}
-		ranger := visitExpr(ctx.Expr(), gv)
+		ranger := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 		switch ranger.GetKind().GType {
 		case types.GArray, types.GSlice:
 			for x := 0; x < ranger.GetKind().Int; x++ {
@@ -486,34 +481,34 @@ func visitFoStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 	} else if n := ctx.GetFss(); n != nil {
 		visitGeneric(n, gv)
 	}
-	v := visitExpr(ctx.Expr(), gv)
+	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 	for v.GetBool() {
 		visitGeneric(ctx.Block(), gv)
 		if gv.PathEndBlock() {
 			return
 		}
 		visitGeneric(ctx.GetSss(), gv)
-		v = visitExpr(ctx.Expr(), gv)
+		v = visitGeneric(ctx.Expr(), gv).(*types.PVal)
 	}
 }
 
 func visitWhStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 	ctx := actx.(*parser.WhStatementContext)
 	gv.Prc = ctx
-	v := visitExpr(ctx.Expr(), gv)
+	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 	for v.GetBool() {
 		visitGeneric(ctx.Block(), gv)
 		if gv.PathEndBlock() {
 			return
 		}
-		v = visitExpr(ctx.Expr(), gv)
+		v = visitGeneric(ctx.Expr(), gv).(*types.PVal)
 	}
 }
 
 func visitCaseStatement(actx antlr.ParserRuleContext, gv *types.GVal, v *types.PVal) bool {
 	ctx := actx.(*parser.CaseStatementContext)
 	gv.Prc = ctx
-	if gv.Fc.Path == types.PFallthrough || visitExprListBool(ctx.ExprList(), gv, v) {
+	if gv.Fc.Path == types.PFallthrough || visitGeneric(ctx.ExprList(), gv, v).(bool) {
 		if gv.Fc.Path == types.PFallthrough {
 			gv.Fc.Path = types.PNormal
 		}
@@ -536,7 +531,7 @@ func visitCaseStatement(actx antlr.ParserRuleContext, gv *types.GVal, v *types.P
 func visitSwitchStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 	ctx := actx.(*parser.SwitchStatementContext)
 	gv.Prc = ctx
-	v := visitExpr(ctx.Expr(), gv)
+	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 	broken := false
 	for _, child := range ctx.AllCaseStatement() {
 		if visitCaseStatement(child, gv, v) {
@@ -569,7 +564,7 @@ func visitSwitchStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 func visitIfStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 	ctx := actx.(*parser.IfStatementContext)
 	gv.Prc = ctx
-	v := visitExpr(ctx.Expr(), gv)
+	v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 	if v.GetBool() {
 		visitGeneric(ctx.AllBlock()[0], gv)
 	} else {
@@ -584,7 +579,7 @@ func visitStatement(actx antlr.ParserRuleContext, gv *types.GVal) {
 	gv.Prc = ctx
 	switch v := ctx.GetChild(0).(type) {
 	case *parser.ExprContext:
-		visitExpr(v, gv)
+		_ = visitGeneric(v, gv).(*types.PVal)
 	case *parser.IfStatementContext:
 		visitIfStatement(v, gv)
 	case *parser.WhStatementContext:
