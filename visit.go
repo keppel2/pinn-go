@@ -300,6 +300,8 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 						rt.(*types.PVal).Set(int(x-lhsv), x)
 					}
 				}
+			case "+":
+				rt = visitGeneric(ctx.Expr(0), gv)
 			case "-":
 				e := visitGeneric(ctx.Expr(0), gv).(*types.PVal)
 				switch e.GetKind().VType {

@@ -59,8 +59,8 @@ expr
   funcExpr
   | ID LPAREN exprList? ')'
   | indexExpr
-  | ('-' | '!' | '^') expr
-  | expr ('-' | '^' | BINOP) expr
+  | ('+' | '-' | '!' | '^') expr
+  | expr ('+' | '-' | '^' | BINOP) expr
   | expr ('==' | '!=' | '>' | '<' | '>=' | '<=' ) expr
   | expr ('&&' | '||') expr
   | expr '?' expr COLON expr
@@ -115,12 +115,12 @@ statement
   | ';' ;
 set
   : ID (LSQUARE expr ']')? '=' expr #simpleSet
-  | ID (LSQUARE expr ']')? ('-' | '^' | BINOP) '=' expr #compoundSet ;
+  | ID (LSQUARE expr ']')? ('+' | '-' | '^' | BINOP) '=' expr #compoundSet ;
 
 COLON : ':' ;
 CE : ':=' ;
 IOTA : 'iota' ;
-BINOP : ('+' | '*' | '/' | '%' | '&' | '|' | '<<' | '>>' ) ;
+BINOP : ('*' | '/' | '%' | '&' | '|' | '<<' | '>>' ) ;
 BOOL : 'true' | 'false' ;
 ID : [a-zA-Z_]([a-zA-Z_0-9])* ;
 CHAR : '\''[a-zA-Z_0-9]'\'' ;
