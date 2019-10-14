@@ -1,5 +1,7 @@
 func main ( )
 {
+	valA := 747;
+	if (valA == 474) { print("bad"); } else if (valA == 747) { print(valA); } else { print("worse"); }
 	fo i int = 0; i < 5; i = i + 1 {
 		print (i );
 	}

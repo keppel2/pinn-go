@@ -164,6 +164,8 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		} else {
 			if ctx.Block(1) != nil {
 				visitGeneric(ctx.Block(1), gv)
+			} else if ctx.IfStatement() != nil {
+				visitGeneric(ctx.IfStatement(), gv)
 			}
 		}
 

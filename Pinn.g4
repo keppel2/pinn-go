@@ -82,7 +82,9 @@ returnStatement
   : 'return' expr? ';' ;
 
 ifStatement
-  : 'if' expr block ('else' block)?;
+  : 'if' expr block
+  | 'if' expr block 'else' block
+  | 'if' expr block 'else' ifStatement;
 
 whStatement
   : 'wh' expr block ;
