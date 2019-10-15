@@ -59,7 +59,6 @@ func main ( )
 	case true:
 		print ("first");
 		fallthrough;
-		print ("bad");
 	case false:
 		print ("fell through");
 		fallthrough;
@@ -121,6 +120,12 @@ func main ( )
 	repeat {
 		print(ri);
 	} while ri < 100;
+
+	guard true else {
+		print("fail");
+		return;
+	}
+	print("guard pass");
 
 }
 func doSlice(s [slice]int) {

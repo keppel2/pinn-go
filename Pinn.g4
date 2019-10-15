@@ -86,6 +86,9 @@ ifStatement
   | 'if' expr block 'else' block
   | 'if' expr block 'else' ifStatement;
 
+guardStatement
+  : 'guard' expr 'else' block;
+
 whStatement
   : 'while' expr block ;
 
@@ -109,6 +112,7 @@ statement
   | varDecl ';' 
   | simpleStatement ';'
   | ifStatement
+  | guardStatement
   | whStatement 
   | repeatStatement ';'
   | switchStatement
@@ -117,7 +121,7 @@ statement
   | 'break' ';'
   | 'continue' ';'
   | 'fallthrough' ';'
-  | 'debug' ';'
+  | 'debug' LPAREN ')' ';'
   | ';' ;
 set
   : ID (LSQUARE expr ']')? '=' expr #simpleSet

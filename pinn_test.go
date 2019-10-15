@@ -51,6 +51,16 @@ func main()
 `)
 	testNeg(t,
 		`
+func main()
+{
+	guard false else {
+		print(5);
+	}
+}
+`)
+
+	testNeg(t,
+		`
 func v() {}
 func main()
 {

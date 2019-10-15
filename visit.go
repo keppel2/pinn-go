@@ -23,10 +23,15 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 				gv.Fc.Path = types.PNormal
 			}
 		cloop:
-			for _, child := range ctx.AllStatement() {
+			for k, child := range ctx.AllStatement() {
 				visitGeneric(child, gv)
 				switch gv.Fc.Path {
-				case types.PContinue, types.PExiting, types.PFallthrough:
+				case types.PFallthrough:
+					if k != len(ctx.AllStatement())-1 {
+						panic(types.ErrWrongStatement)
+					}
+					fallthrough
+				case types.PContinue, types.PExiting:
 					break cloop
 				case types.PBreak:
 					gv.Fc.Path = types.PNormal
@@ -164,6 +169,15 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 				}
 				visitGeneric(ctx.GetSss(), gv)
 				v = visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			}
+		}
+
+	case *parser.GuardStatementContext:
+		v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+		if !v.GetBool() {
+			visitGeneric(ctx.Block(), gv)
+			if gv.Fc.Path == types.PNormal {
+				panic(types.ErrWrongStatement)
 			}
 		}
 
@@ -458,6 +472,9 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 	case *parser.BlockContext:
 		for _, child := range ctx.AllStatement() {
 			visitGeneric(child, gv)
+			if gv.Fc.Path == types.PFallthrough {
+				panic(types.ErrWrongStatement)
+			}
 			if !gv.IsPathNormal() {
 				break
 			}
