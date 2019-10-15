@@ -116,6 +116,11 @@ func main ( )
 	case 1, 5, void():
 		print ("Multi case");
 	}
+	print ("Repeat");
+	ri := 101;
+	repeat {
+		print(ri);
+	} while ri < 100;
 
 }
 func doSlice(s [slice]int) {

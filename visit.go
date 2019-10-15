@@ -87,6 +87,16 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		default:
 			visitGeneric(v.(antlr.ParserRuleContext), gv)
 		}
+	case *parser.RepeatStatementContext:
+		b := true
+		for b {
+			visitGeneric(ctx.Block(), gv)
+			if gv.PathEndBlock() {
+				break
+			}
+			v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
+			b = v.GetBool()
+		}
 
 	case *parser.WhStatementContext:
 		v := visitGeneric(ctx.Expr(), gv).(*types.PVal)

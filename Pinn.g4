@@ -89,6 +89,9 @@ ifStatement
 whStatement
   : 'while' expr block ;
 
+repeatStatement
+  : 'repeat' block 'while' expr ;
+
 RANGE : 'range' ;
 
 foStatement
@@ -107,6 +110,7 @@ statement
   | simpleStatement ';'
   | ifStatement
   | whStatement 
+  | repeatStatement ';'
   | switchStatement
   | returnStatement
   | foStatement
