@@ -157,6 +157,7 @@ func main ()
 	print(slsi);
 	slsi = arsi[:2];
 	print(slsi);
+	print(arsi[0@2]);
 }
 
 globalString string = "i am global";

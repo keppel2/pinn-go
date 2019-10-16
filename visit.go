@@ -586,7 +586,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 	case *parser.IndexExprContext:
 		v := gv.GetPv(ctx.ID().GetText())
-		if ctx.COLON() != nil {
+		if ctx.COLON() != nil || ctx.TWODOTS() != nil{
 			lhsv := 0
 			if e := ctx.GetFirst(); e != nil {
 				lhsv = int(visitGeneric(e, gv).(*types.PVal).GetInt())
@@ -595,6 +595,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			if e := ctx.GetSecond(); e != nil {
 				rhsv = int(visitGeneric(e, gv).(*types.PVal).GetInt())
 			}
+			if ctx.TWODOTS() != nil {rhsv++}
 			rt = v.Slice(lhsv, rhsv)
 		} else {
 			e := visitGeneric(ctx.Expr(0), gv).(*types.PVal)
