@@ -53,7 +53,7 @@ func main ()
 	printH (0x1ha);
 
 	print ((4:7));
-	print ((:3));
+	print ((1@10));
 }
 func bad() bool {
 	print ("bad");

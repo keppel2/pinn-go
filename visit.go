@@ -310,14 +310,14 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			id := v.GetText()
 			switch id {
 			case "(":
-				if ctx.COLON() == nil {
+				if ctx.COLON() == nil && ctx.TWODOTS() == nil {
 					rt = visitGeneric(ctx.Expr(0), gv).(*types.PVal)
 				} else {
-					var lhsv int64 = 0
-					if e := ctx.GetFirstExpr(); e != nil {
-						lhsv = visitGeneric(e, gv).(*types.PVal).GetInt()
-					}
+					lhsv := visitGeneric(ctx.GetFirstExpr(), gv).(*types.PVal).GetInt()
 					rhsv := visitGeneric(ctx.GetSecondExpr(), gv).(*types.PVal).GetInt()
+					if ctx.COLON() == nil {
+						rhsv++
+					}
 					if rhsv-lhsv < 0 {
 						panic(types.ErrRange)
 					}

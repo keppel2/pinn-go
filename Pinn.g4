@@ -1,4 +1,6 @@
 grammar Pinn;
+
+TWODOTS : '@' ;
 file : ( function | varDecl ';' )+ ;
 function
   : 'func' ID LPAREN (fvarDecl (',' fvarDecl)*)?  ')' kind? block ;
@@ -37,12 +39,8 @@ simpleStatement
   : set
   | ID (LSQUARE expr ']')? ('++' | '--') ;
 
-bracketExpr
-  : LSQUARE first=expr? COLON second=expr? ']'
-  | LSQUARE expr ']' ;
-
 indexExpr
-  : ID LSQUARE first=expr? COLON second=expr? ']'
+  : ID LSQUARE first=expr? (TWODOTS | COLON) second=expr? ']'
   | ID LSQUARE expr ']' ;
 
 funcExpr
@@ -65,7 +63,7 @@ expr
   | expr ('&&' | '||') expr
   | expr '?' expr COLON expr
   | LPAREN expr ')'
-  | LPAREN firstExpr=expr? COLON secondExpr=expr ')'
+  | LPAREN firstExpr=expr (TWODOTS | COLON) secondExpr=expr ')'
   | ID
   | FLOAT
   | INT
