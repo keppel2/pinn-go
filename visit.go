@@ -184,12 +184,18 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 	case *parser.IfStatementContext:
 		v := visitGeneric(ctx.Expr(), gv).(*types.PVal)
 		if v.GetBool() {
-			visitGeneric(ctx.AllBlock()[0], gv)
+			if ctx.Statement(0) != nil {
+				visitGeneric(ctx.Statement(0), gv)
+			} else {
+				visitGeneric(ctx.AllBlock()[0], gv)
+			}
 		} else {
 			if ctx.Block(1) != nil {
 				visitGeneric(ctx.Block(1), gv)
 			} else if ctx.IfStatement() != nil {
 				visitGeneric(ctx.IfStatement(), gv)
+			} else if ctx.Statement(1) != nil {
+				visitGeneric(ctx.Statement(1), gv)
 			}
 		}
 

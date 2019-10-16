@@ -82,7 +82,8 @@ returnStatement
 ifStatement
   : 'if' expr block
   | 'if' expr block 'else' block
-  | 'if' expr block 'else' ifStatement;
+  | 'if' expr block 'else' ifStatement
+  | 'if' expr statement ('else' statement)?;
 
 guardStatement
   : 'guard' expr 'else' block;
@@ -116,6 +117,7 @@ statement
   | switchStatement
   | returnStatement
   | foStatement
+  | block
   | 'break' ';'
   | 'continue' ';'
   | 'fallthrough' ';'
