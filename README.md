@@ -5,7 +5,7 @@ Pinn
 
 Pinn is a computer language that is heavily influenced by Go. It is statically typed and imperative. Some aims include:
 
-* Syntax taken from a variety of languages. Unopiniated about which the user should use.
+* Syntax taken from a variety of languages--Go, Swift, and Rust. Unopiniated about which the user should use.
 * Markedly reduced numeric types.
 * Built-in numeric big and float types.
 
