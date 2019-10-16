@@ -54,7 +54,6 @@ func main()
 func main()
 {
 	guard false else {
-		print(5);
 	}
 }
 `)

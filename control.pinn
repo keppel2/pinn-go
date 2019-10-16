@@ -96,7 +96,7 @@ func main ( )
 	print(val2);
 	}
 
-	for key2, val2 = range (101:105) {
+	for key2, val2 = range 101:105 {
 	print(val2);
 	}
 

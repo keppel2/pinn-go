@@ -260,6 +260,22 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			rt = visitGeneric(ctx.FuncExpr(), gv)
 			break
 		}
+		if ctx.GetFirstExpr() != nil {
+			lhsv := visitGeneric(ctx.GetFirstExpr(), gv).(*types.PVal).GetInt()
+			rhsv := visitGeneric(ctx.GetSecondExpr(), gv).(*types.PVal).GetInt()
+			if ctx.COLON() == nil {
+				rhsv++
+			}
+			if rhsv-lhsv < 0 {
+				panic(types.ErrRange)
+			}
+			rt = types.NewPval(types.GArray, types.TInt, int(rhsv-lhsv))
+			for x := lhsv; x < rhsv; x += 1 {
+				rt.(*types.PVal).Set(int(x-lhsv), x)
+			}
+			break
+		}
+
 		schildren, _ := symTokens(ctx)
 		if ctx.GetChildCount() == 1 {
 			tok := schildren[0]
@@ -309,23 +325,6 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 		case antlr.TerminalNode:
 			id := v.GetText()
 			switch id {
-			case "(":
-				if ctx.COLON() == nil && ctx.TWODOTS() == nil {
-					rt = visitGeneric(ctx.Expr(0), gv).(*types.PVal)
-				} else {
-					lhsv := visitGeneric(ctx.GetFirstExpr(), gv).(*types.PVal).GetInt()
-					rhsv := visitGeneric(ctx.GetSecondExpr(), gv).(*types.PVal).GetInt()
-					if ctx.COLON() == nil {
-						rhsv++
-					}
-					if rhsv-lhsv < 0 {
-						panic(types.ErrRange)
-					}
-					rt = types.NewPval(types.GArray, types.TInt, int(rhsv-lhsv))
-					for x := lhsv; x < rhsv; x += 1 {
-						rt.(*types.PVal).Set(int(x-lhsv), x)
-					}
-				}
 			case "+":
 				rt = visitGeneric(ctx.Expr(0), gv)
 			case "-":
@@ -353,6 +352,8 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 				default:
 					panic(types.ErrCase)
 				}
+			case "(":
+				rt = visitGeneric(ctx.Expr(0), gv).(*types.PVal)
 
 			default:
 				id = ctx.ID().GetText()
@@ -586,7 +587,7 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 
 	case *parser.IndexExprContext:
 		v := gv.GetPv(ctx.ID().GetText())
-		if ctx.COLON() != nil || ctx.TWODOTS() != nil{
+		if ctx.COLON() != nil || ctx.TWODOTS() != nil {
 			lhsv := 0
 			if e := ctx.GetFirst(); e != nil {
 				lhsv = int(visitGeneric(e, gv).(*types.PVal).GetInt())
@@ -595,7 +596,9 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			if e := ctx.GetSecond(); e != nil {
 				rhsv = int(visitGeneric(e, gv).(*types.PVal).GetInt())
 			}
-			if ctx.TWODOTS() != nil {rhsv++}
+			if ctx.TWODOTS() != nil {
+				rhsv++
+			}
 			rt = v.Slice(lhsv, rhsv)
 		} else {
 			e := visitGeneric(ctx.Expr(0), gv).(*types.PVal)

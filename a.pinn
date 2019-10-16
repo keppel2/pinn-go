@@ -1,3 +1,4 @@
 func main () {
-	print("bad");
+a := 2:5;
+	a[0:2];
 }

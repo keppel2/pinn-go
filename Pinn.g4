@@ -39,8 +39,8 @@ simpleStatement
   : set
   | ID (LSQUARE expr ']')? ('++' | '--') ;
 
-indexExpr
-  : ID LSQUARE first=expr? (TWODOTS | COLON) second=expr? ']'
+indexExpr :
+  ID LSQUARE first=expr? (TWODOTS | COLON) second=expr? ']' 
   | ID LSQUARE expr ']' ;
 
 funcExpr
@@ -63,7 +63,7 @@ expr
   | expr ('&&' | '||') expr
   | expr '?' expr COLON expr
   | LPAREN expr ')'
-  | LPAREN firstExpr=expr (TWODOTS | COLON) secondExpr=expr ')'
+  | firstExpr=expr (TWODOTS | COLON) secondExpr=expr
   | ID
   | FLOAT
   | INT
