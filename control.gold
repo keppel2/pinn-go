@@ -46,3 +46,6 @@ Multi case
 Repeat
 101
 guard pass
+simple if
+dangling if
+block statement

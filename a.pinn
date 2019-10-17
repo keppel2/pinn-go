@@ -1,5 +1,3 @@
 func main () {
-{ print("block"); }
-if true print ("iftrue");
-if false print("bad"); else print("good");
+	if true - - 4 ;
 }

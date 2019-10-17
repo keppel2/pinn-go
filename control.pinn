@@ -127,8 +127,8 @@ func main ( )
 	}
 	print("guard pass");
 
-	if true print("simple if");
-	if true if false ; else print("dangling if");
+	if (true) print("simple if");
+	if (true) if (false) ; else print("dangling if");
 	{print("block statement");}
 
 }
