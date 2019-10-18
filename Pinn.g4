@@ -36,7 +36,7 @@ TYPES
   : ('int' | 'bool' | 'unit' | 'string' | 'big' | 'float' | 'char' ) ; 
 
 simpleStatement
-  : set
+  : pset
   | ID (LSQUARE expr ']')? ('++' | '--') ;
 
 indexExpr :
@@ -80,9 +80,6 @@ returnStatement
   : 'return' expr? ';' ;
 
 ifStatement
-//  : 'if' expr block
-//  | 'if' expr block 'else' block
-//  | 'if' expr block 'else' ifStatement
   : 'if' expr statement ('else' statement)?;
 
 guardStatement
@@ -123,7 +120,7 @@ statement
   | 'fallthrough' ';'
   | 'debug' LPAREN ')' ';'
   | ';' ;
-set
+pset
   : ID (LSQUARE expr ']')? '=' expr #simpleSet
   | ID (LSQUARE expr ']')? ('+' | '-' | '^' | BINOP) '=' expr #compoundSet ;
 
