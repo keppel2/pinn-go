@@ -6,7 +6,7 @@ function
   : 'func' ID LPAREN (fvarDecl (',' fvarDecl)*)?  ')' kind? block ;
 
 testRule
-  : ID ID ;
+  : name=expr;
 
 block
   : '{' statement* '}' ;
@@ -52,18 +52,22 @@ funcExpr
   | 'strLen' LPAREN expr ')'
   | 'stringValue' LPAREN expr ')' ;
 
+callExpr: 
+
+  ID LPAREN exprList? ')';
+parenExpr: LPAREN expr ')';
+
 expr
   : 
   funcExpr
-  | ID LPAREN exprList? ')'
   | indexExpr
   | ('+' | '-' | '!' | '^') expr
   | expr ('+' | '-' | '^' | BINOP) expr
   | expr ('==' | '!=' | '>' | '<' | '>=' | '<=' ) expr
   | expr ('&&' | '||') expr
-  | expr '?' expr COLON expr
-  | LPAREN expr ')'
-  | firstExpr=expr (TWODOTS | COLON) secondExpr=expr
+  | callExpr
+  | parenExpr 
+  | expr (TWODOTS | COLON) expr
   | ID
   | FLOAT
   | INT
@@ -71,7 +75,8 @@ expr
   | STRING
   | CHAR
   | IOTA
-  ;
+
+  | expr '?' expr COLON expr;
 
 exprList
   : expr (',' expr)* ;
