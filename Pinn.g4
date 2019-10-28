@@ -35,9 +35,12 @@ FILL
 TYPES
   : ('int' | 'bool' | 'unit' | 'string' | 'big' | 'float' | 'char' ) ; 
 
+DOUBLEOP
+  : '++' | '--' ;
+
 simpleStatement
   : pset
-  | ID (LSQUARE expr ']')? ('++' | '--') ;
+  | ID (LSQUARE expr ']')? DOUBLEOP ;
 
 indexExpr :
   ID LSQUARE first=expr? (TWODOTS | COLON) second=expr? ']' 
@@ -100,7 +103,7 @@ RANGE : 'range' ;
 
 foStatement
   : 'for' (varDecl | fss=simpleStatement)? ';' expr ';' sss=simpleStatement block
-  | 'for' ID ',' ID '=' RANGE expr block |
+  | 'for' ID COMMA ID '=' RANGE expr block |
     'for' ID '=' RANGE expr block ;
 caseStatement
   : 'case' exprList COLON statement* ;
@@ -127,8 +130,9 @@ statement
   | ';' ;
 pset
   : ID (LSQUARE expr ']')? '=' expr #simpleSet
-  | ID (LSQUARE expr ']')? ('+' | '-' | '^' | BINOP) '=' expr #compoundSet ;
+  | ID (LSQUARE index=expr ']')? ('+' | '-' | '^' | BINOP) '=' rhs=expr #compoundSet ;
 
+COMMA : ',' ;
 COLON : ':' ;
 CE : ':=' ;
 IOTA : 'iota' ;
