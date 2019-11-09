@@ -11,7 +11,7 @@ Pinn is a statically typed computer language.
 
 ## Specification
 
-The grammar is clean of implementation language and is written in ANTLR. It has implementations in Go and Swift. The Swift implementation is more recent and at github.com/keppel2/pinSwift.
+The grammar is clean of implementation language and is written in ANTLR. It has implementations in Go and Swift. The Swift implementation is more recent and at https://github.com/keppel2/pinnSwift.
 
 Running Go version
 =======
