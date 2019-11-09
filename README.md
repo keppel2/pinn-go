@@ -3,18 +3,17 @@ Pinn
 
 ## Overview
 
-Pinn is a computer language that is heavily influenced by Go. It is statically typed and imperative. Some aims include:
+Pinn is a statically typed computer language.
 
-* Syntax taken from a variety of languages--Go, Swift, and Rust. Unopiniated about which the user should use.
-* Markedly reduced numeric types.
+* Syntax taken from a variety of languages--Go, Swift, and Rust.
+* Single 64-bit signed integer.
 * Built-in numeric big and float types.
-
 
 ## Specification
 
-The grammar is clean of implementation language and is written in ANTLR. It happens to be interpreted in the Go language for now.
+The grammar is clean of implementation language and is written in ANTLR. It has implementations in Go and Swift.
 
-Running
+Running Go version
 =======
 
 Get ANTLR from https://www.antlr.org/download.html.
@@ -38,14 +37,14 @@ Running ANTLR
 
 ## Lexical
 
-Most lexical elements are borrowed from Go.
+Most lexical elements are borrowed from Go. Later elements include support for `_` in numeric literals and binary floating point.
 
 ## Element Types
 
 * `int`. Always a signed 64-bit.
 * `bool`. Standard, `true` or `false`.
 * `unit`. Can only be `iota`. As a special case, getting an element from a map of unit will return `true` if the key is defined (to `iota`), and `false` otherwise.
-* `string`. Immutable. Indexed into characters.
+* `string`. Immutable.
 * `big`. Big integer.
 * `float`. Big float. See Go.
 * `char`. Character. Implemented as UTF-32.
@@ -53,8 +52,8 @@ Most lexical elements are borrowed from Go.
 ## Group Types
 
 * Scalar is a single element.
-* `map`. Key is always a string.
-* `slice`. Pointer to a region of an array or slice. See Go.
+* `map`. Key is always a string. Like Go, a missing string returns the zero value.
+* `slice`. Pointer to a region of an array or slice. Shares memory in Go and copies in Swift.
 * `array`. Arrays are passed by value.
 
 ## Expressions
