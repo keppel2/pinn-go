@@ -62,4 +62,11 @@ Most lexical elements are borrowed from Go. Later elements include support for `
 
 ## Statements
 
-Taken from Go, with some variations.
+* `while <expr> <block>`
+    * Evaluate `expr`. If true, execute `block` and repeat this line. If false, go on.
+* `repeat <block> while <expr>`
+    * Execute `block`. Evaluate `expr`. If true, repeat this line.
+* `return [<expr>] ;`
+    * Return from function. The `expr` must match the return type, or empty if there is none. If global, there is no return type.
+* `if <expr> <statement> [else <statement>]`
+    * Evaluate `expr`. If true, exectue first `statement`. If false, either move on or execute second `statement`.
