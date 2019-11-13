@@ -88,4 +88,8 @@ Most lexical elements are borrowed from Go. Later elements include support for `
   * Evaluate `expr`. If true, exectue first `statement`. If false, either move on or execute second `statement`.
 * `guard` <expr> `else` <block>
   * Evaluate `expr`. If false, execute `block`. The block must relinquish control, with a `return`, `break`, or `continue`.
-   
+
+## Variable declaration
+* `<id> <kind> [ = <expr_list> ]
+* `id := <expr>`
+  * Short declaration.
