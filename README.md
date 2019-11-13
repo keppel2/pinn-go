@@ -34,6 +34,16 @@ Running ANTLR
 * `java -jar <path_to_antlr_jar> -Dlanguage=Go -o pparser Pinn.g4`
 
 # Elements
+## Notation
+```
+|  alternation
+()  grouping
+[]  option (0 or 1 times)
+{}  repetition (0 to n times)
+literal  type as specified
+<production>  rule specified elsewhere
+"{" "[" ...  notation elements as literals
+```
 
 ## Lexical
 
@@ -60,13 +70,22 @@ Most lexical elements are borrowed from Go. Later elements include support for `
 
 * Almost all taken from Go, so much like c/Java. Conditional expression was put back in.
 
-## Statements
+## Compilation unit
+* `( <function> | <statement>)+ EOF`
+
+## block
+* `"{" { <statement> } "}"`
+
+## statement
 
 * `while <expr> <block>`
-    * Evaluate `expr`. If true, execute `block` and repeat this line. If false, go on.
+ * Evaluate `expr`. If true, execute `block` and repeat this line. If false, go on.
 * `repeat <block> while <expr>`
-    * Execute `block`. Evaluate `expr`. If true, repeat this line.
+ * Execute `block`. Evaluate `expr`. If true, repeat this line.
 * `return [<expr>] ;`
-    * Return from function. The `expr` must match the return type, or empty if there is none. If global, there is no return type.
+ * Return from function. The `expr` must match the return type, or empty if there is none. If global, there is no return type.
 * `if <expr> <statement> [else <statement>]`
-    * Evaluate `expr`. If true, exectue first `statement`. If false, either move on or execute second `statement`.
+ * Evaluate `expr`. If true, exectue first `statement`. If false, either move on or execute second `statement`.
+* `guard` <expr> `else` <block>
+ * Evaluate `expr`. If false, execute `block`. The block must relinquish control, with a `return`, `break`, or `continue`.
+   
