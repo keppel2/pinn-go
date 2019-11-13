@@ -86,10 +86,11 @@ Most lexical elements are borrowed from Go. Later elements include support for `
   * Return from function. The `expr` must match the return type, or empty if there is none. If global, there is no return type.
 * `if <expr> <statement> [else <statement>]`
   * Evaluate `expr`. If true, exectue first `statement`. If false, either move on or execute second `statement`.
-* `guard` <expr> `else` <block>
+* `guard <expr> else <block>`
   * Evaluate `expr`. If false, execute `block`. The block must relinquish control, with a `return`, `break`, or `continue`.
 
 ## Variable declaration
 * `<id> <kind> [ = <expr_list> ]
+  * Declare `id` of `kind` type. Optionally initialize it.
 * `id := <expr>`
   * Short declaration.
