@@ -90,7 +90,7 @@ Most lexical elements are borrowed from Go. Later elements include support for `
   * Evaluate `expr`. If false, execute `block`. The block must relinquish control, with a `return`, `break`, or `continue`.
 
 ## Variable declaration
-* `<id> <kind> [ = <expr_list> ]
+* `<id> <kind> [ = <expr_list> ]`
   * Declare `id` of `kind` type. Optionally initialize it.
 * `id := <expr>`
   * Short declaration.
