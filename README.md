@@ -1,49 +1,11 @@
-Pinn
-====
+# Pinn is a computer language that lets you be correct.
 
-## Overview
+Pinn is a statically typed, imperative language for computers.
 
-Pinn is a statically typed computer language.
-
-* Syntax taken from a variety of languages--Go, Swift, and Rust.
-* Single 64-bit signed integer.
-* Built-in numeric big and float types.
+* Syntax taken mostly from Go.
+* Carefully chosen ideas from Swift.
 
 ## Specification
-
-The grammar is clean of implementation language and is written in ANTLR. It has implementations in Go and Swift. The Swift implementation is more recent and at https://github.com/keppel2/pinnSwift.
-
-Running Go version
-=======
-
-Get ANTLR from https://www.antlr.org/download.html.
-
-Save the following to `hello.pinn`:
-
-> func main ( ) {
-> 	print ("Hello, world.");
-> }
-
-Then run the ANTLR code and run `go run -f hello.pinn`. You should see:
-
-> Hello, world.
-
-Running ANTLR
--------------
-
-* `java -jar <path_to_antlr_jar> -Dlanguage=Go -o pparser Pinn.g4`
-
-# Elements
-## Notation
-```
-|  alternation
-()  grouping
-[]  option (0 or 1 times)
-{}  repetition (0 to n times)
-literal  type as specified
-<production>  rule specified elsewhere
-"{" "[" ...  notation elements as literals
-```
 
 ## Lexical
 
@@ -53,7 +15,6 @@ Most lexical elements are borrowed from Go. Later elements include support for `
 
 * `int`. Always a signed 64-bit.
 * `bool`. Standard, `true` or `false`.
-* `unit`. Can only be `iota`. As a special case, getting an element from a map of unit will return `true` if the key is defined (to `iota`), and `false` otherwise.
 * `string`. Immutable.
 * `big`. Big integer.
 * `float`. Big float. See Go.
@@ -94,3 +55,39 @@ Most lexical elements are borrowed from Go. Later elements include support for `
   * Declare `id` of `kind` type. Optionally initialize it.
 * `id := <expr>`
   * Short declaration.
+
+
+The grammar is clean of implementation language and is written in ANTLR. It has implementations in Go and Swift. The Swift implementation is more recent and at https://github.com/keppel2/pinnSwift.
+
+# Running Go version
+
+
+Get ANTLR from https://www.antlr.org/download.html.
+
+Save the following to `hello.pinn`:
+
+> func main ( ) {
+> 	print ("Hello, world.");
+> }
+
+Then run the ANTLR code and run `go run -f hello.pinn`. You should see:
+
+> Hello, world.
+
+Running ANTLR
+-------------
+
+* `java -jar <path_to_antlr_jar> -Dlanguage=Go -o pparser Pinn.g4`
+
+# Elements
+## Notation
+```
+|  alternation
+()  grouping
+[]  option (0 or 1 times)
+{}  repetition (0 to n times)
+literal  type as specified
+<production>  rule specified elsewhere
+"{" "[" ...  notation elements as literals
+```
+
