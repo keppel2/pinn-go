@@ -70,7 +70,7 @@ Save the following to `hello.pinn`:
 > 	print ("Hello, world.");
 > }
 
-Then run the ANTLR code and run `go run -f hello.pinn`. You should see:
+Then run the ANTLR code and run `go run . -f hello.pinn`. You should see:
 
 > Hello, world.
 
