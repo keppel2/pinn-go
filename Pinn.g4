@@ -6,7 +6,7 @@ function
   : 'func' ID LPAREN (fvarDecl (',' fvarDecl)*)?  ')' kind? block ;
 
 testRule
-  : name=expr;
+  : ID ID ;
 
 block
   : '{' statement* '}' ;
@@ -35,12 +35,9 @@ FILL
 TYPES
   : ('int' | 'bool' | 'unit' | 'string' | 'big' | 'float' | 'char' ) ; 
 
-DOUBLEOP
-  : '++' | '--' ;
-
 simpleStatement
   : pset
-  | ID (LSQUARE expr ']')? DOUBLEOP ;
+  | ID (LSQUARE expr ']')? ('++' | '--') ;
 
 indexExpr :
   ID LSQUARE first=expr? (TWODOTS | COLON) second=expr? ']' 
@@ -55,22 +52,18 @@ funcExpr
   | 'strLen' LPAREN expr ')'
   | 'stringValue' LPAREN expr ')' ;
 
-callExpr: 
-
-  ID LPAREN exprList? ')';
-parenExpr: LPAREN expr ')';
-
 expr
   : 
   funcExpr
+  | ID LPAREN exprList? ')'
   | indexExpr
   | ('+' | '-' | '!' | '^') expr
   | expr ('+' | '-' | '^' | BINOP) expr
   | expr ('==' | '!=' | '>' | '<' | '>=' | '<=' ) expr
   | expr ('&&' | '||') expr
-  | callExpr
-  | parenExpr 
-  | expr (TWODOTS | COLON) expr
+  | expr '?' expr COLON expr
+  | LPAREN expr ')'
+  | firstExpr=expr (TWODOTS | COLON) secondExpr=expr
   | ID
   | FLOAT
   | INT
@@ -78,8 +71,7 @@ expr
   | STRING
   | CHAR
   | IOTA
-
-  | expr '?' expr COLON expr;
+  ;
 
 exprList
   : expr (',' expr)* ;
@@ -103,7 +95,7 @@ RANGE : 'range' ;
 
 foStatement
   : 'for' (varDecl | fss=simpleStatement)? ';' expr ';' sss=simpleStatement block
-  | 'for' ID COMMA ID '=' RANGE expr block |
+  | 'for' ID ',' ID '=' RANGE expr block |
     'for' ID '=' RANGE expr block ;
 caseStatement
   : 'case' exprList COLON statement* ;
@@ -130,9 +122,8 @@ statement
   | ';' ;
 pset
   : ID (LSQUARE expr ']')? '=' expr #simpleSet
-  | ID (LSQUARE index=expr ']')? ('+' | '-' | '^' | BINOP) '=' rhs=expr #compoundSet ;
+  | ID (LSQUARE expr ']')? ('+' | '-' | '^' | BINOP) '=' expr #compoundSet ;
 
-COMMA : ',' ;
 COLON : ':' ;
 CE : ':=' ;
 IOTA : 'iota' ;

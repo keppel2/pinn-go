@@ -258,9 +258,9 @@ func visitGeneric(actx antlr.ParserRuleContext, gv *types.GVal, args ...interfac
 			rt = visitGeneric(ctx.FuncExpr(), gv)
 			break
 		}
-		if ctx.GetFirstExpr() != nil {
-			lhsv := visitGeneric(ctx.GetFirstExpr(), gv).(*types.PVal).GetInt()
-			rhsv := visitGeneric(ctx.GetSecondExpr(), gv).(*types.PVal).GetInt()
+		if ctx.COLON() != nil || ctx.TWODOTS() != nil {
+			lhsv := visitGeneric(ctx.Expr(0), gv).(*types.PVal).GetInt()
+			rhsv := visitGeneric(ctx.Expr(1), gv).(*types.PVal).GetInt()
 			if ctx.COLON() == nil {
 				rhsv++
 			}
