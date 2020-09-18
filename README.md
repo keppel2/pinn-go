@@ -1,4 +1,4 @@
-_First version of Pinn, in ANTLR and Go._
+_First version of Pinn, in ANTLR and Go. Archived, but works as is._
 
 # Pinn is a computer language that lets you be correct.
 
