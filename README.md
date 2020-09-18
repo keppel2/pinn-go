@@ -1,3 +1,5 @@
+_First version of Pinn, in ANTLR and Go._
+
 # Pinn is a computer language that lets you be correct.
 
 Pinn is a statically typed, imperative language for computers.
